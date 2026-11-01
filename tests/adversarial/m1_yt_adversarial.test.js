@@ -122,7 +122,9 @@ async function runM1YtAdversarialTests() {
   });
 
   test('1.4: Action type is strictly "modifyHeaders"', () => {
-    for (const rule of rules) {
+    const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
+    assert.ok(modifyRules.length >= 1, 'At least one modifyHeaders rule must exist');
+    for (const rule of modifyRules) {
       assert.strictEqual(rule.action.type, 'modifyHeaders');
       assert.ok(Array.isArray(rule.action.responseHeaders), 'action.responseHeaders must be an array');
     }
@@ -130,7 +132,8 @@ async function runM1YtAdversarialTests() {
 
   test('1.5: Header removal operations adhere to Chrome DNR specification', () => {
     const validOperations = new Set(['remove', 'set', 'append']);
-    for (const rule of rules) {
+    const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
+    for (const rule of modifyRules) {
       for (const h of rule.action.responseHeaders) {
         assert.strictEqual(typeof h.header, 'string', 'Header name must be string');
         assert.ok(h.header.trim().length > 0, 'Header name must not be empty');
@@ -163,17 +166,23 @@ async function runM1YtAdversarialTests() {
   });
 
   test('1.7: Resource types strictly target "sub_frame" and NEVER "main_frame"', () => {
-    for (const rule of rules) {
+    const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
+    for (const rule of modifyRules) {
       assert.strictEqual(rule.condition.urlFilter, '*', 'Condition urlFilter must be wildcard "*"');
       assert.ok(Array.isArray(rule.condition.resourceTypes), 'resourceTypes must be an array');
       assert.ok(
         rule.condition.resourceTypes.includes('sub_frame'),
         'Rule condition must explicitly include "sub_frame"'
       );
-      assert.ok(
-        !rule.condition.resourceTypes.includes('main_frame'),
-        'SECURITY INVARIANT VIOLATION: Rule condition must NEVER include "main_frame"'
-      );
+    }
+    // Security invariant across all rules: NEVER include main_frame
+    for (const rule of rules) {
+      if (rule.condition && rule.condition.resourceTypes) {
+        assert.ok(
+          !rule.condition.resourceTypes.includes('main_frame'),
+          'SECURITY INVARIANT VIOLATION: Rule condition must NEVER include "main_frame"'
+        );
+      }
     }
   });
 

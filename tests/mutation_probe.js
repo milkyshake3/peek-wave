@@ -13,7 +13,7 @@ const crypto = require('crypto');
 const { execSync } = require('child_process');
 
 const CONTENT_PATH = path.resolve(__dirname, '../content/content.js');
-const EXPECTED_HASH = 'e8984a05447fb66e2f66ea71aabf58cb3d6ea23db537f4d0e6b8f6b817f33b00';
+const EXPECTED_HASH = '900ebf1f9167364abb604171c0df82f592cb3289ac5847de203198d60e6f8f4e';
 
 function getHash(filePath) {
   const content = fs.readFileSync(filePath);

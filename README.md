@@ -26,7 +26,7 @@ Hold a configurable modifier key (Shift by default) and click any link to previe
    - Chrome: chrome://extensions/
    - Edge: edge://extensions/
    - Brave: brave://extensions/
-   - Dia: dia://extensions/
+   - Arc: arc://extensions/
 3. Enable Developer mode via the toggle switch in the upper-right corner.
 4. Click the "Load unpacked" button.
 5. In the file picker, select the repository root directory (the folder containing manifest.json).

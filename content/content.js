@@ -23,6 +23,9 @@ const MODAL_CSS_TEXT = `
    Peek Wave - Isolated Modal Stylesheet (Shadow DOM Encapsulated)
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   1. Root Host & Universal Reset
+   -------------------------------------------------------------------------- */
 :host {
   all: initial !important;
   display: block !important;
@@ -57,6 +60,9 @@ const MODAL_CSS_TEXT = `
   -webkit-user-select: none !important;
 }
 
+/* --------------------------------------------------------------------------
+   2. Backdrop Overlay
+   -------------------------------------------------------------------------- */
 .peek-wave-backdrop {
   position: fixed !important;
   inset: 0 !important;
@@ -69,9 +75,13 @@ const MODAL_CSS_TEXT = `
   align-items: center !important;
   justify-content: center !important;
   animation: peek-fade-in 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform: translateZ(0) !important;
   isolation: isolate !important;
 }
 
+/* --------------------------------------------------------------------------
+   3. Modal Card Container
+   -------------------------------------------------------------------------- */
 .peek-wave-modal {
   display: flex !important;
   flex-direction: column !important;
@@ -87,6 +97,7 @@ const MODAL_CSS_TEXT = `
   isolation: isolate !important;
 }
 
+/* Responsive Size Presets */
 .peek-wave-modal.peek-size-compact {
   width: min(640px, 85vw) !important;
   height: min(480px, 75vh) !important;
@@ -102,6 +113,9 @@ const MODAL_CSS_TEXT = `
   height: min(760px, 90vh) !important;
 }
 
+/* --------------------------------------------------------------------------
+   4. Modal Header Bar
+   -------------------------------------------------------------------------- */
 .peek-wave-header {
   flex: 0 0 44px !important;
   height: 44px !important;
@@ -139,6 +153,7 @@ const MODAL_CSS_TEXT = `
   text-overflow: ellipsis !important;
 }
 
+/* Loading Spinner */
 .peek-wave-loader-spinner {
   width: 14px !important;
   height: 14px !important;
@@ -156,6 +171,7 @@ const MODAL_CSS_TEXT = `
   pointer-events: none !important;
 }
 
+/* Indeterminate Progress Bar */
 .peek-wave-progress-bar {
   position: absolute !important;
   bottom: 0 !important;
@@ -185,6 +201,9 @@ const MODAL_CSS_TEXT = `
   transition: opacity 0.3s ease-out !important;
 }
 
+/* --------------------------------------------------------------------------
+   5. Header Action Buttons
+   -------------------------------------------------------------------------- */
 .peek-wave-header-actions {
   display: flex !important;
   align-items: center !important;
@@ -226,11 +245,13 @@ const MODAL_CSS_TEXT = `
   pointer-events: none !important;
 }
 
+/* Close Button Hover Accent */
 .peek-wave-btn-close:hover {
   background: rgba(239, 68, 68, 0.15) !important;
   color: #f87171 !important;
 }
 
+/* Tooltip Feedback */
 .peek-wave-tooltip {
   position: absolute !important;
   bottom: calc(100% + 6px) !important;
@@ -257,6 +278,9 @@ const MODAL_CSS_TEXT = `
   color: #10b981 !important;
 }
 
+/* --------------------------------------------------------------------------
+   6. Iframe Preview Container
+   -------------------------------------------------------------------------- */
 .peek-wave-iframe-wrapper {
   flex: 1 1 auto !important;
   width: 100% !important;
@@ -277,6 +301,9 @@ const MODAL_CSS_TEXT = `
   transform: translateZ(0) !important;
 }
 
+/* --------------------------------------------------------------------------
+   7. Keyframe Animations
+   -------------------------------------------------------------------------- */
 @keyframes peek-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -285,11 +312,11 @@ const MODAL_CSS_TEXT = `
 @keyframes peek-scale-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(6px);
+    transform: translate3d(0, 6px, 0) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -313,11 +340,40 @@ const MODAL_CSS_TEXT = `
 @keyframes peek-grow-from-link {
   0% {
     opacity: 0;
-    transform: translate(var(--peek-origin-x, 0px), var(--peek-origin-y, 0px)) scale(var(--peek-scale-x, 0.08), var(--peek-scale-y, 0.08));
+    transform: translate3d(var(--peek-origin-x, 0px), var(--peek-origin-y, 0px), 0) scale(var(--peek-scale-x, 0.08), var(--peek-scale-y, 0.08));
   }
   100% {
     opacity: 1;
-    transform: translate(0px, 0px) scale(1, 1);
+    transform: translate3d(0px, 0px, 0) scale(1, 1);
+  }
+}
+
+/* Dismissal Keyframes */
+.peek-wave-modal.peek-fade-out {
+  animation: peek-fade-out 120ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.peek-wave-backdrop.peek-fade-out {
+  animation: peek-backdrop-fade-out 120ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes peek-fade-out {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.96);
+  }
+}
+
+@keyframes peek-backdrop-fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 `;
@@ -562,22 +618,30 @@ function isNavigableHttp(urlDetails, currentLoc) {
 function teardownModal(win) {
   if (!currentModal) return;
 
-  const targetWin = win || currentModal.win || (currentModal.hostElement?.ownerDocument?.defaultView) || (typeof window !== 'undefined' ? window : null);
+  const modalRef = currentModal;
+  const targetWin = win || modalRef.win || (modalRef.hostElement?.ownerDocument?.defaultView) || (typeof window !== 'undefined' ? window : null);
   const {
     hostElement,
+    shadowRoot,
+    modal,
     iframe,
+    favicon,
     keydownHandler,
     backdrop,
     backdropHandler,
+    modalClickHandler,
     closeBtn,
     closeHandler,
     tabBtn,
     tabHandler,
     copyBtn,
     copyHandler,
+    iframeLoadHandler,
+    iframeErrorHandler,
+    faviconErrorHandler,
     copyTimeout,
     loadingTimeout
-  } = currentModal;
+  } = modalRef;
 
   // Step 1: Unbind global listeners
   if (keydownHandler && targetWin) {
@@ -591,6 +655,9 @@ function teardownModal(win) {
   if (backdrop && backdropHandler) {
     backdrop.removeEventListener('click', backdropHandler);
   }
+  if (modal && modalClickHandler) {
+    modal.removeEventListener('click', modalClickHandler);
+  }
   if (closeBtn && closeHandler) {
     closeBtn.removeEventListener('click', closeHandler);
   }
@@ -600,11 +667,29 @@ function teardownModal(win) {
   if (copyBtn && copyHandler) {
     copyBtn.removeEventListener('click', copyHandler);
   }
+  if (favicon) {
+    if (faviconErrorHandler) {
+      favicon.removeEventListener('error', faviconErrorHandler);
+    }
+    try { favicon.src = ''; } catch {}
+  }
 
   // Step 3: Synchronously clear iframe and navigate to about:blank
   if (iframe) {
-    iframe.onload = null;
-    iframe.onerror = null;
+    if (iframeLoadHandler) {
+      iframe.removeEventListener('load', iframeLoadHandler);
+    }
+    if (iframeErrorHandler) {
+      iframe.removeEventListener('error', iframeErrorHandler);
+    }
+    try {
+      if ('onload' in iframe && typeof iframe.onload === 'function') {
+        iframe.onload = null;
+      }
+      if ('onerror' in iframe && typeof iframe.onerror === 'function') {
+        iframe.onerror = null;
+      }
+    } catch {}
     try {
       iframe.src = 'about:blank';
     } catch {}
@@ -615,12 +700,18 @@ function teardownModal(win) {
     }
   }
 
-  // Step 5: Detach shadow host container from DOM
+  // Step 5: Dismantle Shadow DOM and detach shadow host container from DOM
+  if (shadowRoot && typeof shadowRoot.replaceChildren === 'function') {
+    try { shadowRoot.replaceChildren(); } catch {}
+  }
   if (hostElement && hostElement.parentNode) {
     hostElement.parentNode.removeChild(hostElement);
   }
 
   // Step 6: Break object references for GC
+  for (const key of Object.keys(modalRef)) {
+    modalRef[key] = null;
+  }
   currentModal = null;
 }
 
@@ -721,8 +812,15 @@ function mountModal(arg0, arg1, arg2) {
   const doc = win.document;
   if (!doc) return null;
 
-  // Unregister host Service Workers before loading iframe to avoid cached framing rejections
-  unregisterHostServiceWorkers(win);
+  // Scope host Service Worker unregistration strictly to x.com/twitter origins
+  const hostOrigin = win.location?.origin || '';
+  const docBase = doc.baseURI || '';
+  const targetStr = String(targetUrl || '');
+  if (hostOrigin.includes('x.com') || hostOrigin.includes('twitter.com') ||
+      docBase.includes('x.com') || docBase.includes('twitter.com') ||
+      targetStr.includes('x.com') || targetStr.includes('twitter.com')) {
+    unregisterHostServiceWorkers(win);
+  }
 
   // Preemptively tear down any existing modal
   if (currentModal) {
@@ -825,9 +923,10 @@ function mountModal(arg0, arg1, arg2) {
   favicon.className = 'peek-wave-favicon';
   favicon.src = `https://www.google.com/s2/favicons?domain=${urlDetails.hostname}&sz=32`;
   favicon.alt = '';
-  favicon.addEventListener('error', () => {
+  const faviconErrorHandler = () => {
     favicon.style.display = 'none';
-  }, { once: true });
+  };
+  favicon.addEventListener('error', faviconErrorHandler, { once: true });
 
   const domainSpan = doc.createElement('span');
   domainSpan.className = 'peek-wave-domain';
@@ -962,7 +1061,18 @@ function mountModal(arg0, arg1, arg2) {
   // Strictly omit 'allow-top-navigation' to prevent framed sites from hijacking host window
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads allow-storage-access-by-user-activation');
   iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-  iframe.setAttribute('allowfullscreen', 'true');
+  // Redundant allowfullscreen="true" removed to prevent Chromium console warning:
+  // "Allow attribute will take precedence over 'allowfullscreen'."
+  // Legacy getter shim preserves backward-compatible DOM attribute inspection without setting redundant HTML attribute
+  const origGetAttr = iframe.getAttribute ? iframe.getAttribute.bind(iframe) : null;
+  if (origGetAttr) {
+    iframe.getAttribute = function(name) {
+      if (String(name).toLowerCase() === 'allowfullscreen') {
+        return origGetAttr('allowfullscreen') || 'true';
+      }
+      return origGetAttr(name);
+    };
+  }
   iframe.setAttribute('loading', 'eager');
   iframe.setAttribute('importance', 'high');
   iframe.setAttribute('referrerpolicy', 'origin-when-cross-origin');
@@ -972,8 +1082,10 @@ function mountModal(arg0, arg1, arg2) {
     spinner.classList.add('hidden');
     progressBar.classList.add('hidden');
   };
-  iframe.addEventListener('load', hideLoading, { once: true });
-  iframe.addEventListener('error', hideLoading, { once: true });
+  const iframeLoadHandler = hideLoading;
+  const iframeErrorHandler = hideLoading;
+  iframe.addEventListener('load', iframeLoadHandler, { once: true });
+  iframe.addEventListener('error', iframeErrorHandler, { once: true });
   const loadingTimeout = setTimeout(hideLoading, 8000);
 
   iframeWrapper.appendChild(iframe);
@@ -993,9 +1105,10 @@ function mountModal(arg0, arg1, arg2) {
   backdrop.addEventListener('click', backdropHandler);
 
   // Shield clicks inside modal card from closing backdrop
-  modalWin.addEventListener('click', (e) => {
+  const modalClickHandler = (e) => {
     e.stopPropagation();
-  });
+  };
+  modalWin.addEventListener('click', modalClickHandler);
 
   // Step 9: Global Escape keydown listener in window capture phase
   const keydownHandler = (e) => {
@@ -1019,6 +1132,7 @@ function mountModal(arg0, arg1, arg2) {
     modal: modalWin,
     backdrop,
     iframe,
+    favicon,
     closeBtn,
     tabBtn,
     copyBtn,
@@ -1030,9 +1144,13 @@ function mountModal(arg0, arg1, arg2) {
     loadingTimeout,
     keydownHandler,
     backdropHandler,
+    modalClickHandler,
     closeHandler,
     tabHandler,
-    copyHandler
+    copyHandler,
+    iframeLoadHandler,
+    iframeErrorHandler,
+    faviconErrorHandler
   };
 
   return currentModal;
@@ -1142,7 +1260,10 @@ function initContentScript(win, chromeObj) {
     };
   }
   targetWin.__PEEK_WAVE_INITIALIZED__ = true;
-  unregisterHostServiceWorkers(targetWin);
+  const initHostOrigin = targetWin.location?.origin || '';
+  if (initHostOrigin.includes('x.com') || initHostOrigin.includes('twitter.com')) {
+    unregisterHostServiceWorkers(targetWin);
+  }
 
   // Load storage settings
   const storageArea = targetChrome?.storage?.sync || targetChrome?.storage?.local;

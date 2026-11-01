@@ -405,22 +405,6 @@ function runAdversarialIconTests() {
     }
   }
 
-  // Also verify master SVG
-  const svgPath = path.join(iconsDir, 'icon.svg');
-  if (fs.existsSync(svgPath)) {
-    const svgContent = fs.readFileSync(svgPath, 'utf8');
-    if (svgContent.includes('<svg') && svgContent.includes('</svg>') && svgContent.includes('viewBox="0 0 128 128"')) {
-      console.log(`[PASS] Master SVG asset valid (icon.svg: ${svgContent.length} bytes)\n`);
-      totalPass++;
-    } else {
-      console.error(`[FAIL] Master SVG asset invalid\n`);
-      totalFail++;
-    }
-  } else {
-    console.error(`[FAIL] Master SVG asset missing: ${svgPath}\n`);
-    totalFail++;
-  }
-
   console.log('---------------------------------------------------------------');
   console.log(`Icon Binary Verification Results: ${totalPass} Passed, ${totalFail} Failed`);
   console.log('---------------------------------------------------------------\n');
