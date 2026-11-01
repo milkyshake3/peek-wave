@@ -672,6 +672,29 @@ function createSvgElement(doc, className, children) {
 }
 
 /**
+ * Unregisters any active Service Workers on the host page (e.g. x.com).
+ * This prevents SW caches from serving responses with X-Frame-Options: deny that bypass DeclarativeNetRequest.
+ * @param {Window} [win]
+ */
+function unregisterHostServiceWorkers(win) {
+  const targetWin = win || (typeof window !== 'undefined' ? window : null);
+  const swNav = targetWin?.navigator || (typeof navigator !== 'undefined' ? navigator : null);
+  if (swNav?.serviceWorker?.getRegistrations) {
+    try {
+      swNav.serviceWorker.getRegistrations()
+        .then((regs) => {
+          if (Array.isArray(regs)) {
+            regs.forEach((r) => {
+              try { r.unregister(); } catch {}
+            });
+          }
+        })
+        .catch(() => {});
+    } catch {}
+  }
+}
+
+/**
  * Mounts the isolated Shadow DOM preview modal on document.documentElement.
  * @param {string} targetUrl 
  * @param {object} [options]
@@ -697,6 +720,9 @@ function mountModal(arg0, arg1, arg2) {
   if (!win) return null;
   const doc = win.document;
   if (!doc) return null;
+
+  // Unregister host Service Workers before loading iframe to avoid cached framing rejections
+  unregisterHostServiceWorkers(win);
 
   // Preemptively tear down any existing modal
   if (currentModal) {
@@ -799,9 +825,9 @@ function mountModal(arg0, arg1, arg2) {
   favicon.className = 'peek-wave-favicon';
   favicon.src = `https://www.google.com/s2/favicons?domain=${urlDetails.hostname}&sz=32`;
   favicon.alt = '';
-  favicon.onerror = () => {
+  favicon.addEventListener('error', () => {
     favicon.style.display = 'none';
-  };
+  }, { once: true });
 
   const domainSpan = doc.createElement('span');
   domainSpan.className = 'peek-wave-domain';
@@ -934,7 +960,7 @@ function mountModal(arg0, arg1, arg2) {
   iframe.className = 'peek-wave-iframe';
   iframe.src = urlDetails.fullUrl;
   // Strictly omit 'allow-top-navigation' to prevent framed sites from hijacking host window
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads allow-storage-access-by-user-activation');
   iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
   iframe.setAttribute('allowfullscreen', 'true');
   iframe.setAttribute('loading', 'eager');
@@ -1116,6 +1142,7 @@ function initContentScript(win, chromeObj) {
     };
   }
   targetWin.__PEEK_WAVE_INITIALIZED__ = true;
+  unregisterHostServiceWorkers(targetWin);
 
   // Load storage settings
   const storageArea = targetChrome?.storage?.sync || targetChrome?.storage?.local;
@@ -1221,6 +1248,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isNavigableHttp,
     mountModal,
     teardownModal,
+    unregisterHostServiceWorkers,
     handleCaptureClick,
     initContentScript,
     getModal: () => currentModal,

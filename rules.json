@@ -4,6 +4,18 @@
     "priority": 1,
     "action": {
       "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Sec-Fetch-Dest",
+          "operation": "set",
+          "value": "document"
+        },
+        {
+          "header": "Sec-Fetch-Mode",
+          "operation": "set",
+          "value": "navigate"
+        }
+      ],
       "responseHeaders": [
         {
           "header": "X-Frame-Options",
@@ -35,6 +47,20 @@
       "urlFilter": "*",
       "resourceTypes": [
         "sub_frame"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "||abs.twimg.com/responsive-web/client-serviceworker/*",
+      "resourceTypes": [
+        "script",
+        "xmlhttprequest"
       ]
     }
   }

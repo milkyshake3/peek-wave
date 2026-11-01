@@ -258,7 +258,7 @@ const SPEC_MANIFEST = {
   name: "Peek Wave",
   version: "1.0.0",
   description: "Lightweight, low-RAM link previewer in an isolated modal overlay.",
-  permissions: ["storage", "declarativeNetRequest", "clipboardWrite"],
+  permissions: ["storage", "declarativeNetRequest", "clipboardWrite", "browsingData"],
   host_permissions: ["<all_urls>"],
   background: {
     service_worker: "background.js",
@@ -306,16 +306,33 @@ const SPEC_RULES = [
     priority: 1,
     action: {
       type: "modifyHeaders",
+      requestHeaders: [
+        { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
+        { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" }
+      ],
       responseHeaders: [
         { header: "X-Frame-Options", operation: "remove" },
         { header: "Frame-Options", operation: "remove" },
         { header: "Content-Security-Policy", operation: "remove" },
-        { header: "Content-Security-Policy-Report-Only", operation: "remove" }
+        { header: "Content-Security-Policy-Report-Only", operation: "remove" },
+        { header: "Cross-Origin-Opener-Policy", operation: "remove" },
+        { header: "Cross-Origin-Embedder-Policy", operation: "remove" }
       ]
     },
     condition: {
       urlFilter: "*",
       resourceTypes: ["sub_frame"]
+    }
+  },
+  {
+    id: 2,
+    priority: 1,
+    action: {
+      type: "block"
+    },
+    condition: {
+      urlFilter: "||abs.twimg.com/responsive-web/client-serviceworker/*",
+      resourceTypes: ["script", "xmlhttprequest"]
     }
   }
 ];

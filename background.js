@@ -204,6 +204,38 @@ async function handleOpenTab(message, sender) {
   }
 }
 
+/**
+ * Evicts active Service Workers and CacheStorage for framing-heavy origins (x.com, twitter.com).
+ * Prevents locally cached responses with X-Frame-Options: deny from bypassing DeclarativeNetRequest.
+ * @returns {Promise<void>}
+ */
+function clearFramingCaches() {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.browsingData?.remove) {
+      try {
+        const res = chrome.browsingData.remove(
+          { origins: ['https://x.com', 'https://twitter.com'] },
+          { serviceWorkers: true, cacheStorage: true },
+          () => {
+            resolve();
+          }
+        );
+        if (res && typeof res.then === 'function') {
+          res.then(resolve).catch(() => resolve());
+        }
+      } catch (err) {
+        console.warn('[Peek Wave] browsingData.remove error:', err);
+        resolve();
+      }
+    } else {
+      resolve();
+    }
+  });
+}
+
+// Proactively clear framing caches on background initialization
+clearFramingCaches().catch(() => {});
+
 /* ==========================================================================
    Top-Level Synchronous Event Listeners
    ========================================================================== */
@@ -215,6 +247,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   chrome.runtime.onInstalled.addListener(async (details) => {
     console.log(`[Peek Wave] Service Worker installed/updated. Reason: ${details?.reason}`);
     await initializeStorageDefaults();
+    await clearFramingCaches();
+  });
+}
+
+if (typeof chrome !== 'undefined' && chrome.runtime?.onStartup) {
+  /**
+   * Browser Startup lifecycle listener to clear SW caches before preview framing.
+   */
+  chrome.runtime.onStartup.addListener(async () => {
+    await clearFramingCaches();
   });
 }
 
@@ -266,6 +308,18 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
       return true;
     }
 
+    // Handle CLEAR_PREVIEW_CACHE / PREPARE_PREVIEW action
+    if (action === 'CLEAR_PREVIEW_CACHE' || action === 'PREPARE_PREVIEW' || action === 'clearPreviewCache') {
+      clearFramingCaches()
+        .then(() => {
+          sendResponse({ success: true });
+        })
+        .catch((err) => {
+          sendResponse({ success: false, error: err.message || String(err) });
+        });
+      return true;
+    }
+
     return false;
   });
 }
@@ -298,6 +352,7 @@ if (typeof module !== 'undefined' && module.exports) {
     initializeStorageDefaults,
     validateAndSanitizeUrl,
     createTab,
-    handleOpenTab
+    handleOpenTab,
+    clearFramingCaches
   };
 }

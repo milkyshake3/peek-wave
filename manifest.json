@@ -6,7 +6,8 @@
   "permissions": [
     "storage",
     "declarativeNetRequest",
-    "clipboardWrite"
+    "clipboardWrite",
+    "browsingData"
   ],
   "host_permissions": [
     "<all_urls>"

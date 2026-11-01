@@ -190,6 +190,61 @@ describe('Tier 4: Real-World Application Scenarios', () => {
       assert.ok(env.doc.getElementById('feed-root') !== null);
       assert.strictEqual(env.doc.getElementById('peek-wave-host'), null);
     });
+
+    test('T4.S2.6: Clicking t.co link in tweet opens preview modal with t.co URL for redirect resolution', () => {
+      const env = setupTestEnvironment();
+      const link = env.doc.createElement('a');
+      link.href = 'https://t.co/XyZ123Preview';
+      env.doc.body.appendChild(link);
+
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const modal = env.getModal();
+      assert.ok(modal !== null);
+      assert.strictEqual(modal.iframe.src, 'https://t.co/XyZ123Preview');
+      assert.ok(modal.iframe.sandbox.contains('allow-scripts'));
+      assert.ok(modal.iframe.sandbox.contains('allow-same-origin'));
+      assert.ok(!modal.iframe.sandbox.contains('allow-top-navigation'));
+      env.teardown();
+    });
+
+    test('T4.S2.7: Preview modal created on host page x.com does not set inline event handlers violating CSP', () => {
+      const env = setupTestEnvironment();
+      env.doc.baseURI = 'https://x.com/home';
+      const link = env.doc.createElement('a');
+      link.href = 'https://github.com/trending';
+      env.doc.body.appendChild(link);
+
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const modal = env.getModal();
+      assert.ok(modal !== null);
+      const favicon = modal.shadowRoot.querySelector('.peek-wave-favicon');
+      assert.strictEqual(favicon.onerror, null, 'Must not set inline onerror on x.com');
+      env.teardown();
+    });
+
+    test('T4.S2.8: Host page Service Worker unregistration triggers on modal mount', async () => {
+      const env = setupTestEnvironment();
+      let unregistered = false;
+      env.win.navigator.serviceWorker = {
+        getRegistrations: async () => [{
+          unregister: async () => { unregistered = true; return true; }
+        }]
+      };
+
+      const link = env.doc.createElement('a');
+      link.href = 'https://x.com/elonmusk';
+      env.doc.body.appendChild(link);
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      // Allow async unregistration microtask to complete
+      await Promise.resolve();
+      await Promise.resolve();
+
+      assert.strictEqual(unregistered, true, 'Service worker on host page must be unregistered');
+      env.teardown();
+    });
   });
 
   // --------------------------------------------------------------------------

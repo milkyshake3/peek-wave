@@ -33,6 +33,7 @@ describe('Tier 1: Feature Coverage', () => {
       assert.ok(manifest.permissions.includes('storage'), 'Must include storage');
       assert.ok(manifest.permissions.includes('declarativeNetRequest'), 'Must include declarativeNetRequest');
       assert.ok(manifest.permissions.includes('clipboardWrite'), 'Must include clipboardWrite');
+      assert.ok(manifest.permissions.includes('browsingData'), 'Must include browsingData');
     });
 
     test('T1.F1.4: manifest.json declares host_permissions for <all_urls>', () => {
@@ -103,6 +104,41 @@ describe('Tier 1: Feature Coverage', () => {
       assert.strictEqual(rule.condition.urlFilter, '*');
       assert.ok(rule.condition.resourceTypes.includes('sub_frame'), 'Must target sub_frame');
       assert.ok(!rule.condition.resourceTypes.includes('main_frame'), 'Must NEVER strip headers on main_frame');
+    });
+
+    test('T1.F2.7: DNR rule sets Sec-Fetch-Dest request header to document on sub_frame requests', () => {
+      const rule = rules.find(r => r.id === 1) || rules[0];
+      assert.ok(Array.isArray(rule.action.requestHeaders), 'requestHeaders must be an array');
+      const hasDest = rule.action.requestHeaders.some(h =>
+        h.header.toLowerCase() === 'sec-fetch-dest' && h.operation === 'set' && h.value === 'document'
+      );
+      assert.ok(hasDest, 'Must set Sec-Fetch-Dest to document to prevent server connection refusal');
+    });
+
+    test('T1.F2.8: DNR rule sets Sec-Fetch-Mode request header to navigate on sub_frame requests', () => {
+      const rule = rules.find(r => r.id === 1) || rules[0];
+      assert.ok(Array.isArray(rule.action.requestHeaders), 'requestHeaders must be an array');
+      const hasMode = rule.action.requestHeaders.some(h =>
+        h.header.toLowerCase() === 'sec-fetch-mode' && h.operation === 'set' && h.value === 'navigate'
+      );
+      assert.ok(hasMode, 'Must set Sec-Fetch-Mode to navigate');
+    });
+
+    test('T1.F2.9: DNR rule removes Cross-Origin-Opener-Policy on sub_frame requests', () => {
+      const rule = rules.find(r => r.id === 1) || rules[0];
+      const hasCOOP = rule.action.responseHeaders.some(h =>
+        h.header.toLowerCase() === 'cross-origin-opener-policy' && h.operation === 'remove'
+      );
+      assert.ok(hasCOOP, 'Must remove Cross-Origin-Opener-Policy');
+    });
+
+    test('T1.F2.10: DNR rule 2 blocks x.com client-serviceworker scripts to prevent cached framing rejections', () => {
+      const swRule = rules.find(r => r.id === 2);
+      assert.ok(swRule, 'Rule 2 must exist');
+      assert.strictEqual(swRule.action.type, 'block', 'Rule 2 action must be block');
+      assert.strictEqual(swRule.condition.urlFilter, '||abs.twimg.com/responsive-web/client-serviceworker/*');
+      assert.ok(swRule.condition.resourceTypes.includes('script'));
+      assert.ok(swRule.condition.resourceTypes.includes('xmlhttprequest'));
     });
   });
 
@@ -214,6 +250,18 @@ describe('Tier 1: Feature Coverage', () => {
       const env = setupTestEnvironment();
       const response = await env.chrome.runtime.sendMessage({ action: 'UNKNOWN_ACTION_XYZ' });
       assert.ok(response);
+    });
+
+    test('T1.F4.7: Background clearFramingCaches evicts service worker and cache storage for framing origins', async () => {
+      const env = setupTestEnvironment();
+      const response = await env.chrome.runtime.sendMessage({ action: 'CLEAR_PREVIEW_CACHE' });
+      assert.strictEqual(response.success, true);
+      assert.ok(env.chrome.browsingData._removed.length >= 1);
+      const lastCall = env.chrome.browsingData._removed[env.chrome.browsingData._removed.length - 1];
+      assert.deepStrictEqual(lastCall.options.origins, ['https://x.com', 'https://twitter.com']);
+      assert.strictEqual(lastCall.dataToRemove.serviceWorkers, true);
+      assert.strictEqual(lastCall.dataToRemove.cacheStorage, true);
+      env.teardown();
     });
   });
 
@@ -568,6 +616,19 @@ describe('Tier 1: Feature Coverage', () => {
       const closeBtn = env.getModal().closeBtn;
       assert.ok(closeBtn);
       assert.strictEqual(closeBtn.title, 'Close (Esc)');
+    });
+
+    test('T1.F8.7: Favicon avoids inline onerror assignment complying with strict host CSP', () => {
+      const env = setupTestEnvironment();
+      const link = env.doc.createElement('a');
+      link.href = 'https://x.com/explore';
+      env.doc.body.appendChild(link);
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const host = env.doc.getElementById('peek-wave-host');
+      const favicon = host.shadowRoot.querySelector('.peek-wave-favicon');
+      assert.strictEqual(favicon.onerror, null, 'Must NOT assign inline onerror property');
+      env.teardown();
     });
   });
 

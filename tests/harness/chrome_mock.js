@@ -241,6 +241,15 @@ class ChromeMock {
         return matchedRules;
       }
     };
+
+    this.browsingData = {
+      _removed: [],
+      remove: (options, dataToRemove, callback) => {
+        this.browsingData._removed.push({ options, dataToRemove });
+        if (typeof callback === 'function') callback();
+        return Promise.resolve();
+      }
+    };
   }
 }
 

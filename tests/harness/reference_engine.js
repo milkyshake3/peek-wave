@@ -427,6 +427,20 @@ function createReferenceEngine() {
         });
         return true; // asynchronous response
       }
+      if (message && (message.action === 'CLEAR_PREVIEW_CACHE' || message.action === 'PREPARE_PREVIEW')) {
+        if (chrome.browsingData?.remove) {
+          chrome.browsingData.remove(
+            { origins: ['https://x.com', 'https://twitter.com'] },
+            { serviceWorkers: true, cacheStorage: true },
+            () => {
+              sendResponse({ success: true });
+            }
+          );
+          return true;
+        }
+        sendResponse({ success: true });
+        return false;
+      }
     };
 
     chrome.runtime.onMessage.addListener(handler);
