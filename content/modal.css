@@ -1,0 +1,328 @@
+/* ==========================================================================
+   Peek Wave - Isolated Modal Stylesheet (Shadow DOM Encapsulated)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Root Host & Universal Reset
+   -------------------------------------------------------------------------- */
+:host {
+  all: initial !important;
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  color: #f8fafc !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  text-align: left !important;
+  direction: ltr !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Backdrop Overlay
+   -------------------------------------------------------------------------- */
+.peek-wave-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  animation: peek-fade-in 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  isolation: isolate !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Modal Card Container
+   -------------------------------------------------------------------------- */
+.peek-wave-modal {
+  display: flex !important;
+  flex-direction: column !important;
+  background: #0f172a !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.1),
+              0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  animation: peek-scale-in 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform: translateZ(0) !important;
+  isolation: isolate !important;
+}
+
+/* Responsive Size Presets */
+.peek-wave-modal.peek-size-compact {
+  width: min(640px, 85vw) !important;
+  height: min(480px, 75vh) !important;
+}
+
+.peek-wave-modal.peek-size-default {
+  width: min(860px, 85vw) !important;
+  height: min(600px, 85vh) !important;
+}
+
+.peek-wave-modal.peek-size-large {
+  width: min(1100px, 92vw) !important;
+  height: min(760px, 90vh) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Modal Header Bar
+   -------------------------------------------------------------------------- */
+.peek-wave-header {
+  flex: 0 0 44px !important;
+  height: 44px !important;
+  background: #1e293b !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 12px !important;
+  position: relative !important;
+}
+
+.peek-wave-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.peek-wave-favicon {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 3px !important;
+  flex-shrink: 0 !important;
+  object-fit: contain !important;
+}
+
+.peek-wave-domain {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Loading Spinner */
+.peek-wave-loader-spinner {
+  width: 14px !important;
+  height: 14px !important;
+  border: 2px solid rgba(255, 255, 255, 0.15) !important;
+  border-top-color: #38bdf8 !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  animation: peek-spin 0.75s linear infinite !important;
+  opacity: 1 !important;
+  transition: opacity 0.25s ease-out !important;
+}
+
+.peek-wave-loader-spinner.hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Indeterminate Progress Bar */
+.peek-wave-progress-bar {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 2.5px !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.peek-wave-progress-bar::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 40% !important;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #06b6d4) !important;
+  border-radius: 2px !important;
+  animation: peek-indeterminate 1.4s infinite ease-in-out !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+}
+
+.peek-wave-progress-bar.hidden {
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Header Action Buttons
+   -------------------------------------------------------------------------- */
+.peek-wave-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.peek-wave-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease !important;
+}
+
+.peek-wave-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+}
+
+.peek-wave-btn:active {
+  transform: scale(0.92) !important;
+}
+
+.peek-wave-btn svg {
+  width: 15px !important;
+  height: 15px !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  fill: none !important;
+  pointer-events: none !important;
+}
+
+/* Close Button Hover Accent */
+.peek-wave-btn-close:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+}
+
+/* Tooltip Feedback */
+.peek-wave-tooltip {
+  position: absolute !important;
+  bottom: calc(100% + 6px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(2px) !important;
+  background: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+  z-index: 10 !important;
+}
+
+.peek-wave-tooltip.active {
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+  color: #10b981 !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Iframe Preview Container
+   -------------------------------------------------------------------------- */
+.peek-wave-iframe-wrapper {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: calc(100% - 44px) !important;
+  position: relative !important;
+  background: #0f172a !important;
+  overflow: hidden !important;
+  contain: strict !important;
+  isolation: isolate !important;
+}
+
+.peek-wave-iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  display: block !important;
+  contain: size layout paint !important;
+  transform: translateZ(0) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Keyframe Animations
+   -------------------------------------------------------------------------- */
+@keyframes peek-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes peek-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes peek-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes peek-indeterminate {
+  0% { transform: translateX(-100%); width: 20%; }
+  50% { transform: translateX(100%); width: 60%; }
+  100% { transform: translateX(300%); width: 20%; }
+}
+
+/* Grow from link origin animation */
+.peek-wave-modal.peek-animate-grow {
+  animation: peek-grow-from-link 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform-origin: center center !important;
+}
+
+@keyframes peek-grow-from-link {
+  0% {
+    opacity: 0;
+    transform: translate(var(--peek-origin-x, 0px), var(--peek-origin-y, 0px)) scale(var(--peek-scale-x, 0.08), var(--peek-scale-y, 0.08));
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0px, 0px) scale(1, 1);
+  }
+}
+

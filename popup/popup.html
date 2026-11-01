@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peek Wave Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <img src="../icons/icon32.png" alt="Peek Wave logo" class="brand-icon" width="28" height="28">
+        <div class="brand-text">
+          <h1 class="brand-title">Peek Wave</h1>
+          <span class="badge" id="versionBadge">v1.0.0</span>
+        </div>
+      </div>
+      <div class="status-wrapper">
+        <span class="status-pill active" id="statusBadge" aria-live="polite">Active</span>
+      </div>
+    </header>
+
+    <main class="popup-content">
+      <!-- Section 1: Master Enable Toggle -->
+      <section class="setting-card toggle-card">
+        <div class="card-info">
+          <label for="enableToggle" class="card-label">Link Previews</label>
+          <p class="card-desc" id="enableToggleDesc">Show instant preview overlay on modifier click</p>
+        </div>
+        <div class="toggle-control">
+          <label class="switch" for="enableToggle">
+            <input type="checkbox" id="enableToggle" name="toggle-enabled" aria-describedby="enableToggleDesc" checked>
+            <span class="slider" aria-hidden="true"></span>
+            <span class="sr-only">Enable or disable Peek Wave link previews</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Section 1b: Grow from Link Animation Toggle -->
+      <section class="setting-card toggle-card">
+        <div class="card-info">
+          <label for="growAnimationToggle" class="card-label">Grow from Link</label>
+          <p class="card-desc" id="growAnimationDesc">Animate modal expanding from clicked link</p>
+        </div>
+        <div class="toggle-control">
+          <label class="switch" for="growAnimationToggle">
+            <input type="checkbox" id="growAnimationToggle" name="growAnimation" aria-describedby="growAnimationDesc" checked>
+            <span class="slider" aria-hidden="true"></span>
+            <span class="sr-only">Enable or disable grow from link animation</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Section 2: Trigger Modifier Key -->
+      <fieldset class="setting-card group-card" role="radiogroup" aria-labelledby="modifierLegend">
+        <div class="card-header-row">
+          <legend id="modifierLegend" class="card-label">Trigger Modifier</legend>
+          <span class="card-hint">Hold key + Click link</span>
+        </div>
+        
+        <div class="segmented-control" id="modifierSegmentedGroup">
+          <label class="segment-option" for="mod-shift">
+            <input type="radio" id="mod-shift" name="modifierKey" value="shift" checked>
+            <span class="segment-pill">
+              <span class="pill-key">Shift</span>
+              <span class="pill-action">+ Click</span>
+            </span>
+          </label>
+
+          <label class="segment-option" for="mod-alt">
+            <input type="radio" id="mod-alt" name="modifierKey" value="alt">
+            <span class="segment-pill">
+              <span class="pill-key">Alt <span class="alt-key">(⌥)</span></span>
+              <span class="pill-action">+ Click</span>
+            </span>
+          </label>
+
+          <label class="segment-option" for="mod-ctrl">
+            <input type="radio" id="mod-ctrl" name="modifierKey" value="ctrl_cmd">
+            <span class="segment-pill">
+              <span class="pill-key">Ctrl <span class="alt-key">(⌘)</span></span>
+              <span class="pill-action">+ Click</span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Accessible & Test-Harness Fallback Select -->
+        <select id="select-modifier" name="modifierSelect" class="sr-only" tabindex="-1" aria-hidden="true">
+          <option value="shift" selected>shift</option>
+          <option value="alt">alt</option>
+          <option value="ctrl_cmd">ctrl_cmd</option>
+        </select>
+      </fieldset>
+
+      <!-- Section 3: Modal Size Dimensions -->
+      <fieldset class="setting-card group-card" role="radiogroup" aria-labelledby="sizeLegend">
+        <div class="card-header-row">
+          <legend id="sizeLegend" class="card-label">Modal Dimensions</legend>
+          <span class="card-hint" id="sizePresetHint">Default: 860×600</span>
+        </div>
+
+        <div class="segmented-control size-control" id="sizeSegmentedGroup">
+          <label class="segment-option" for="size-compact">
+            <input type="radio" id="size-compact" name="modalSize" value="compact">
+            <span class="segment-pill">
+              <span class="pill-title">Compact</span>
+              <span class="pill-dim">640×480</span>
+            </span>
+          </label>
+
+          <label class="segment-option" for="size-default">
+            <input type="radio" id="size-default" name="modalSize" value="default" checked>
+            <span class="segment-pill">
+              <span class="pill-title">Default</span>
+              <span class="pill-dim">860×600</span>
+            </span>
+          </label>
+
+          <label class="segment-option" for="size-large">
+            <input type="radio" id="size-large" name="modalSize" value="large">
+            <span class="segment-pill">
+              <span class="pill-title">Large</span>
+              <span class="pill-dim">1100×760</span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Accessible & Test-Harness Fallback Select -->
+        <select id="select-size" name="sizeSelect" class="sr-only" tabindex="-1" aria-hidden="true">
+          <option value="compact">compact</option>
+          <option value="default" selected>default</option>
+          <option value="large">large</option>
+        </select>
+      </fieldset>
+    </main>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <div class="footer-hint">
+        <svg class="hint-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+          <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4zm0 6.5a.875.875 0 1 1 0 1.75.875.875 0 0 1 0-1.75z"/>
+        </svg>
+        <span class="hint-text">Hold modifier while clicking any link to peek</span>
+      </div>
+
+      <div class="footer-actions">
+        <button type="button" id="resetDefaultsBtn" class="link-btn" title="Reset settings to factory defaults">
+          Reset Defaults
+        </button>
+        <span class="footer-divider" aria-hidden="true">•</span>
+        <button type="button" id="openShortcutsBtn" class="link-btn" title="Configure browser extension shortcuts">
+          Shortcuts ↗
+        </button>
+        <div class="save-status-container">
+          <span id="saveStatus" class="save-status" aria-live="polite">Saved</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="../lib/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

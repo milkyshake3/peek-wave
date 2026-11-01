@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Peek Wave Test Host Page</title>
+  <base href="https://example.com/blog/">
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .card { display: block; padding: 10px; border: 1px solid #ccc; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Test Page for Link Interception</h1>
+
+  <section id="standard-links">
+    <!-- Simple anchor -->
+    <a id="simple-link" href="https://example.com/docs">Standard Link</a>
+
+    <!-- Relative link using base href -->
+    <a id="relative-link" href="post-1.html">Relative Blog Post</a>
+
+    <!-- Deeply nested children inside anchor -->
+    <a id="nested-link" href="https://github.com/facebook/react" class="card">
+      <div class="card-image">
+        <img id="nested-img" src="thumb.jpg" alt="React Logo">
+      </div>
+      <div class="card-content">
+        <h3><span id="nested-span">React <strong>Documentation</strong></span></h3>
+        <p>A JavaScript library for building user interfaces.</p>
+      </div>
+    </a>
+  </section>
+
+  <section id="special-links">
+    <!-- Anchor with javascript: -->
+    <a id="js-link" href="javascript:void(0)">JavaScript Link</a>
+
+    <!-- Anchor with mailto: -->
+    <a id="mailto-link" href="mailto:support@example.com">Email Support</a>
+
+    <!-- Anchor with tel: -->
+    <a id="tel-link" href="tel:+18005550199">Call Us</a>
+
+    <!-- Same-page fragment link -->
+    <a id="fragment-link" href="#comments">Jump to Comments</a>
+
+    <!-- Download link -->
+    <a id="download-link" href="https://example.com/archive.zip" download="archive.zip">Download ZIP</a>
+  </section>
+
+  <section id="svg-links">
+    <!-- SVG Anchor -->
+    <svg id="svg-container" width="100" height="100" viewBox="0 0 100 100">
+      <a id="svg-link" href="https://example.com/vector-graphic">
+        <circle id="svg-circle" cx="50" cy="50" r="40" fill="cyan" />
+      </a>
+    </svg>
+  </section>
+
+  <section id="comments">
+    <h2>Comments Section</h2>
+    <p>Anchor fragment target destination.</p>
+  </section>
+</body>
+</html>
