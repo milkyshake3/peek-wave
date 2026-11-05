@@ -46,6 +46,8 @@ tmp/
 .agents/
 .gemini/
 *.agent/
+AGENT_HANDOFF.md
+*HANDOFF*.md
 
 # --- IDE & Editor Metadata ---
 .vscode/
