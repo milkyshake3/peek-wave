@@ -13,16 +13,16 @@
   
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.16);
-  --border-focus: #6366f1;          /* Indigo 500 */
+  --border-focus: #38bdf8;          /* Sky 400 */
   
   --text-primary: #f8fafc;          /* Slate 50 */
   --text-secondary: #94a3b8;        /* Slate 400 */
   --text-muted: #64748b;            /* Slate 500 */
   
-  --accent-primary: #6366f1;        /* Indigo 500 */
-  --accent-hover: #818cf8;          /* Indigo 400 */
-  --accent-active: #4f46e5;         /* Indigo 600 */
-  --accent-glow: rgba(99, 102, 241, 0.35);
+  --accent-primary: #38bdf8;        /* Sky 400 */
+  --accent-hover: #7dd3fc;          /* Sky 300 */
+  --accent-active: #0284c7;         /* Sky 600 */
+  --accent-glow: rgba(56, 189, 248, 0.35);
   
   --wave-cyan: #38bdf8;             /* Sky 400 */
   --wave-teal: #06b6d4;             /* Cyan 500 */
@@ -44,6 +44,37 @@
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 140ms;
   --duration-normal: 200ms;
+
+  /* Liquid Glass Aesthetics */
+  --card-glass-blur: blur(16px);
+  --card-specular-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  --slider-off-bg: #334155;
+  --pill-hover-bg: rgba(255, 255, 255, 0.04);
+}
+
+@supports (color: AccentColor) {
+  :root {
+    --accent-primary: AccentColor;
+    --border-focus: AccentColor;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-base: #f8fafc;
+    --bg-card: rgba(255, 255, 255, 0.82);
+    --bg-card-hover: rgba(255, 255, 255, 0.92);
+    --bg-control: rgba(226, 232, 240, 0.75);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-hover: rgba(0, 0, 0, 0.15);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --card-glass-blur: blur(16px);
+    --card-specular-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+    --slider-off-bg: #cbd5e1;
+    --pill-hover-bg: rgba(0, 0, 0, 0.04);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -96,6 +127,8 @@ html, body {
   justify-content: space-between;
   padding: 12px 14px;
   background-color: var(--bg-card);
+  backdrop-filter: var(--card-glass-blur, blur(16px));
+  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -168,10 +201,15 @@ html, body {
 
 .setting-card {
   background-color: var(--bg-card);
+  backdrop-filter: var(--card-glass-blur, blur(16px));
+  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 11px 12px;
-  transition: border-color var(--duration-fast) var(--ease-spring);
+  box-shadow: var(--card-specular-shadow);
+  transition: border-color var(--duration-fast) var(--ease-spring),
+              background-color var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-spring);
 }
 
 .setting-card:hover {
@@ -248,7 +286,7 @@ html, body {
 .slider {
   position: absolute;
   inset: 0;
-  background-color: #334155;
+  background-color: var(--slider-off-bg, #334155);
   border-radius: var(--radius-pill);
   transition: background-color var(--duration-normal) var(--ease-spring),
               box-shadow var(--duration-normal) var(--ease-spring);
@@ -291,7 +329,7 @@ html, body {
   background-color: var(--bg-control);
   padding: 3px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
 }
 
 .segment-option {
@@ -324,7 +362,7 @@ html, body {
 
 .segment-option:hover .segment-pill {
   color: var(--text-primary);
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: var(--pill-hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .pill-key {
@@ -394,6 +432,8 @@ html, body {
   gap: 8px;
   padding: 10px 14px 12px;
   background-color: var(--bg-card);
+  backdrop-filter: var(--card-glass-blur, blur(16px));
+  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border-top: 1px solid var(--border-subtle);
 }
 

@@ -35,6 +35,61 @@ const MODAL_CSS_TEXT = `
   height: 100vh !important;
   z-index: 2147483647 !important;
   pointer-events: auto !important;
+
+  /* Theme Tokens - Dark Mode (Default) */
+  --peek-accent: #38bdf8;
+  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(15, 23, 42, 0.50) 100%), rgba(15, 23, 42, 0.50);
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(30, 41, 59, 0.45) 100%), rgba(30, 41, 59, 0.45);
+  --peek-header-border: rgba(255, 255, 255, 0.14);
+  --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
+  --peek-border-glass: rgba(255, 255, 255, 0.18);
+  --peek-text-primary: #f8fafc;
+  --peek-text-muted: #94a3b8;
+  --peek-shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.45), 0 8px 20px rgba(0, 0, 0, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+  --peek-backdrop-bg: rgba(0, 0, 0, 0.40);
+  --peek-btn-hover: rgba(255, 255, 255, 0.10);
+  --peek-btn-close-hover: rgba(239, 68, 68, 0.20);
+  --peek-btn-close-color: #f87171;
+  --peek-domain-hover: rgba(255, 255, 255, 0.10);
+  --peek-domain-active: rgba(255, 255, 255, 0.16);
+  --peek-domain-border: rgba(255, 255, 255, 0.16);
+  --peek-spinner-border: rgba(255, 255, 255, 0.18);
+  --peek-tooltip-bg: #1e293b;
+  --peek-tooltip-border: rgba(255, 255, 255, 0.16);
+  --peek-tooltip-text: #f8fafc;
+  --peek-iframe-bg: #0f172a;
+}
+
+@supports (color: AccentColor) {
+  :host {
+    --peek-accent: AccentColor;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    /* Theme Tokens - Light Mode Overrides */
+    --peek-backdrop-bg: rgba(0, 0, 0, 0.25);
+    --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.58) 50%, rgba(241, 245, 249, 0.65) 100%), rgba(255, 255, 255, 0.60);
+    --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.62) 100%), rgba(255, 255, 255, 0.55);
+    --peek-header-border: rgba(0, 0, 0, 0.08);
+    --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    --peek-border-glass: rgba(255, 255, 255, 0.70);
+    --peek-text-primary: #0f172a;
+    --peek-text-muted: #64748b;
+    --peek-shadow-glass: 0 20px 45px rgba(0, 0, 0, 0.10), 0 6px 15px rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+    --peek-btn-hover: rgba(0, 0, 0, 0.06);
+    --peek-btn-close-hover: rgba(239, 68, 68, 0.12);
+    --peek-btn-close-color: #dc2626;
+    --peek-domain-hover: rgba(0, 0, 0, 0.06);
+    --peek-domain-active: rgba(0, 0, 0, 0.12);
+    --peek-domain-border: rgba(0, 0, 0, 0.12);
+    --peek-spinner-border: rgba(0, 0, 0, 0.15);
+    --peek-tooltip-bg: #ffffff;
+    --peek-tooltip-border: rgba(0, 0, 0, 0.1);
+    --peek-tooltip-text: #0f172a;
+    --peek-iframe-bg: #f8fafc;
+  }
 }
 
 *,
@@ -49,7 +104,7 @@ const MODAL_CSS_TEXT = `
   font-size: 13px !important;
   font-weight: 400 !important;
   line-height: 1.4 !important;
-  color: #f8fafc !important;
+  color: var(--peek-text-primary, #f8fafc) !important;
   letter-spacing: normal !important;
   text-transform: none !important;
   text-align: left !important;
@@ -68,7 +123,7 @@ const MODAL_CSS_TEXT = `
   inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  background-color: rgba(15, 23, 42, 0.65) !important;
+  background-color: var(--peek-backdrop-bg, rgba(0, 0, 0, 0.40)) !important;
   backdrop-filter: blur(4px) !important;
   -webkit-backdrop-filter: blur(4px) !important;
   display: flex !important;
@@ -85,13 +140,14 @@ const MODAL_CSS_TEXT = `
 .peek-wave-modal {
   display: flex !important;
   flex-direction: column !important;
-  background: #0f172a !important;
+  background: var(--peek-glass-bg, rgba(15, 23, 42, 0.50)) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid var(--peek-border-glass, rgba(255, 255, 255, 0.18)) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
   position: relative !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
-              0 0 0 1px rgba(255, 255, 255, 0.1),
-              0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: var(--peek-shadow-glass, 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25)) !important;
   animation: peek-scale-in 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   transform: translateZ(0) !important;
   isolation: isolate !important;
@@ -119,8 +175,11 @@ const MODAL_CSS_TEXT = `
 .peek-wave-header {
   flex: 0 0 44px !important;
   height: 44px !important;
-  background: #1e293b !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--peek-header-bg, rgba(30, 41, 59, 0.45)) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid var(--peek-header-border, rgba(255, 255, 255, 0.14)) !important;
+  box-shadow: var(--peek-header-highlight, inset 0 1px 0 0 rgba(255, 255, 255, 0.28)) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -147,18 +206,47 @@ const MODAL_CSS_TEXT = `
 .peek-wave-domain {
   font-size: 13px !important;
   font-weight: 600 !important;
-  color: #f8fafc !important;
+  color: var(--peek-text-primary, #f8fafc) !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  padding: 2px 7px !important;
+  border-radius: 5px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease !important;
+}
+
+.peek-wave-domain:hover {
+  background: var(--peek-domain-hover, rgba(255, 255, 255, 0.10)) !important;
+  border-color: var(--peek-accent, #38bdf8) !important;
+}
+
+.peek-wave-domain:active {
+  transform: scale(0.96) !important;
+  background: var(--peek-domain-active, rgba(255, 255, 255, 0.16)) !important;
+  border-color: var(--peek-accent, #38bdf8) !important;
+}
+
+.peek-wave-domain:focus-visible {
+  outline: 2px solid var(--peek-accent, #38bdf8) !important;
+  outline-offset: 1px !important;
+}
+
+.peek-wave-domain.copied {
+  color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 /* Loading Spinner */
 .peek-wave-loader-spinner {
   width: 14px !important;
   height: 14px !important;
-  border: 2px solid rgba(255, 255, 255, 0.15) !important;
-  border-top-color: #38bdf8 !important;
+  border: 2px solid var(--peek-spinner-border, rgba(255, 255, 255, 0.15)) !important;
+  border-top-color: var(--peek-accent, #38bdf8) !important;
   border-radius: 50% !important;
   flex-shrink: 0 !important;
   animation: peek-spin 0.75s linear infinite !important;
@@ -190,7 +278,7 @@ const MODAL_CSS_TEXT = `
   left: 0 !important;
   bottom: 0 !important;
   width: 40% !important;
-  background: linear-gradient(90deg, #0284c7, #38bdf8, #06b6d4) !important;
+  background: linear-gradient(90deg, #0284c7, var(--peek-accent, #38bdf8), #06b6d4) !important;
   border-radius: 2px !important;
   animation: peek-indeterminate 1.4s infinite ease-in-out !important;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
@@ -219,19 +307,24 @@ const MODAL_CSS_TEXT = `
   height: 28px !important;
   border-radius: 6px !important;
   background: transparent !important;
-  color: #94a3b8 !important;
+  color: var(--peek-text-muted, #94a3b8) !important;
   cursor: pointer !important;
   position: relative !important;
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease !important;
 }
 
 .peek-wave-btn:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f8fafc !important;
+  background: var(--peek-btn-hover, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--peek-text-primary, #f8fafc) !important;
 }
 
 .peek-wave-btn:active {
   transform: scale(0.92) !important;
+}
+
+.peek-wave-btn:focus-visible {
+  outline: 2px solid var(--peek-accent, #38bdf8) !important;
+  outline-offset: 1px !important;
 }
 
 .peek-wave-btn svg {
@@ -247,8 +340,8 @@ const MODAL_CSS_TEXT = `
 
 /* Close Button Hover Accent */
 .peek-wave-btn-close:hover {
-  background: rgba(239, 68, 68, 0.15) !important;
-  color: #f87171 !important;
+  background: var(--peek-btn-close-hover, rgba(239, 68, 68, 0.15)) !important;
+  color: var(--peek-btn-close-color, #f87171) !important;
 }
 
 /* Tooltip Feedback */
@@ -257,13 +350,13 @@ const MODAL_CSS_TEXT = `
   bottom: calc(100% + 6px) !important;
   left: 50% !important;
   transform: translateX(-50%) translateY(2px) !important;
-  background: #1e293b !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--peek-tooltip-bg, #1e293b) !important;
+  border: 1px solid var(--peek-tooltip-border, rgba(255, 255, 255, 0.12)) !important;
   padding: 3px 8px !important;
   border-radius: 4px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
-  color: #f8fafc !important;
+  color: var(--peek-tooltip-text, #f8fafc) !important;
   white-space: nowrap !important;
   pointer-events: none !important;
   opacity: 0 !important;
@@ -286,7 +379,7 @@ const MODAL_CSS_TEXT = `
   width: 100% !important;
   height: calc(100% - 44px) !important;
   position: relative !important;
-  background: #0f172a !important;
+  background: var(--peek-iframe-bg, #0f172a) !important;
   overflow: hidden !important;
   contain: strict !important;
   isolation: isolate !important;
@@ -531,6 +624,204 @@ function getAnchorRawHref(anchor) {
 }
 
 /**
+ * Evaluates whether a string forms a valid HTTP or HTTPS absolute URL.
+ * @param {string} string 
+ * @returns {boolean}
+ */
+function isValidHttpUrl(string) {
+  if (typeof string !== 'string' || !string.trim()) return false;
+  try {
+    const url = new URL(string.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Strips tracking and attribution parameters from a URL while strictly preserving
+ * functional parameters (such as YouTube timestamps, video IDs, search queries, pagination).
+ * @param {string} rawUrl 
+ * @returns {string} Clean URL
+ */
+function stripTrackingParameters(rawUrl) {
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.toLowerCase();
+    const isYouTube = host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be';
+    const isTwitter = host === 'x.com' || host === 'twitter.com' || host.endsWith('.x.com') || host.endsWith('.twitter.com');
+
+    // Universal tracking parameter patterns safe to remove on all websites
+    const universalTrackers = [
+      /^utm_[a-z0-9_]+$/i,
+      /^fbclid$/i,
+      /^gclid$/i,
+      /^gclsrc$/i,
+      /^dclid$/i,
+      /^msclkid$/i,
+      /^twclid$/i,
+      /^ref_src$/i,
+      /^ref_url$/i,
+      /^twsrc$/i,
+      /^mc_eid$/i,
+      /^mc_cid$/i,
+      /^igshid$/i,
+      /^_hsenc$/i,
+      /^_hsmi$/i
+    ];
+
+    const keysToRemove = [];
+
+    for (const key of parsed.searchParams.keys()) {
+      // 1. Universal tracking parameters
+      if (universalTrackers.some((re) => re.test(key))) {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      // 2. Twitter-specific tracking parameters (s, t) on Twitter/X domains
+      if (isTwitter && (key === 's' || key === 't')) {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      // 3. Twitter share parameters on non-YouTube target URLs
+      if (!isYouTube && (key === 'ref' || key === 's')) {
+        keysToRemove.push(key);
+        continue;
+      }
+    }
+
+    for (const key of keysToRemove) {
+      parsed.searchParams.delete(key);
+    }
+
+    return parsed.href;
+  } catch {
+    return rawUrl;
+  }
+}
+
+/**
+ * Unwraps an anchor element pointing to a forwarder (e.g. t.co) using DOM metadata.
+ * Inspects data-expanded-url, data-full-url, data-url, title, aria-label, and textContent.
+ * @param {Element} anchor 
+ * @param {string} rawHref 
+ * @returns {string|null} Unwrapped destination URL if found, or null
+ */
+function unwrapForwarderAnchor(anchor, rawHref) {
+  if (!anchor) return null;
+
+  // 1. Check data-expanded-url / data-full-url / data-url attributes on anchor or children
+  if (typeof anchor.getAttribute === 'function') {
+    const directExpanded = anchor.getAttribute('data-expanded-url') ||
+                           anchor.getAttribute('data-full-url') ||
+                           anchor.getAttribute('data-url');
+    if (directExpanded && isValidHttpUrl(directExpanded)) {
+      return directExpanded.trim();
+    }
+  }
+
+  if (typeof anchor.querySelector === 'function') {
+    try {
+      const childWithExpanded = anchor.querySelector('[data-expanded-url], [data-full-url], [data-url]');
+      if (childWithExpanded && typeof childWithExpanded.getAttribute === 'function') {
+        const childExpanded = childWithExpanded.getAttribute('data-expanded-url') ||
+                              childWithExpanded.getAttribute('data-full-url') ||
+                              childWithExpanded.getAttribute('data-url');
+        if (childExpanded && isValidHttpUrl(childExpanded)) {
+          return childExpanded.trim();
+        }
+      }
+    } catch {}
+  }
+
+  // Check if rawHref points to t.co or twitter/x forwarder
+  let isForwarder = false;
+  if (typeof rawHref === 'string' && rawHref.trim()) {
+    try {
+      const parsed = new URL(rawHref, 'https://example.com');
+      const host = parsed.hostname.toLowerCase();
+      if (host === 't.co' || host.endsWith('.t.co')) {
+        isForwarder = true;
+      }
+    } catch {}
+  }
+
+  // If not identified as a forwarder by rawHref, check if anchor indicates twitter/card/tweet context
+  if (!isForwarder && typeof anchor.closest === 'function') {
+    try {
+      if (
+        anchor.closest('[data-testid="tweet"]') ||
+        anchor.closest('[data-testid="card.wrapper"]') ||
+        anchor.closest('.tweet') ||
+        anchor.closest('.twitter-tweet') ||
+        anchor.closest('.twitter-card')
+      ) {
+        isForwarder = true;
+      }
+    } catch {}
+  }
+
+  if (!isForwarder) {
+    return null;
+  }
+
+  // 2. Title attribute containing an absolute HTTP/HTTPS URL
+  if (typeof anchor.getAttribute === 'function') {
+    const title = anchor.getAttribute('title');
+    if (title && isValidHttpUrl(title)) {
+      return title.trim();
+    }
+  }
+
+  // 3. Aria-label attribute containing an absolute HTTP/HTTPS URL
+  if (typeof anchor.getAttribute === 'function') {
+    const ariaLabel = anchor.getAttribute('aria-label');
+    if (ariaLabel && isValidHttpUrl(ariaLabel)) {
+      return ariaLabel.trim();
+    }
+  }
+
+  // 4. Non-truncated textContent representing a complete URL or domain path
+  const text = (anchor.textContent || '').trim();
+  if (text && !text.endsWith('…') && !text.endsWith('...') && !text.includes('t.co/')) {
+    if (isValidHttpUrl(text)) {
+      return text;
+    }
+    // Check if text looks like a valid naked domain path (e.g. "github.com/google/gemini")
+    if (/^[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}(?:\/.*)?$/.test(text)) {
+      const candidate = 'https://' + text;
+      if (isValidHttpUrl(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  // 5. Card wrapper fallback check: if anchor is inside a card wrapper that has an expanded URL
+  if (typeof anchor.closest === 'function') {
+    try {
+      const card =
+        anchor.closest('[data-testid="card.wrapper"]') ||
+        anchor.closest('.twitter-card') ||
+        anchor.closest('[data-expanded-url]');
+      if (card && card !== anchor) {
+        if (typeof card.getAttribute === 'function') {
+          const cardUrl = card.getAttribute('data-expanded-url') || card.getAttribute('data-card-url');
+          if (cardUrl && isValidHttpUrl(cardUrl)) {
+            return cardUrl.trim();
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+/**
  * Resolves a clicked event target to its enclosing anchor tag and parses the URL.
  * Supports standard HTML anchors, SVG anchors (SVGAnimatedString), xlink:href in XML namespaces,
  * non-Element targets (Text nodes), and deep nested children.
@@ -562,9 +853,13 @@ function extractAnchorUrl(target, baseURI) {
 
     const rawHref = getAnchorRawHref(anchor);
     if (rawHref) {
-      const details = parseUrlDetails(rawHref, baseURI);
+      const unwrapped = unwrapForwarderAnchor(anchor, rawHref);
+      const effectiveHref = unwrapped || rawHref;
+      const cleanedHref = stripTrackingParameters(effectiveHref);
+      const details = parseUrlDetails(cleanedHref, baseURI);
       if (details) {
         details.rawHref = rawHref;
+        details.effectiveHref = effectiveHref;
         details.anchor = anchor;
       }
       return details;
@@ -626,6 +921,9 @@ function teardownModal(win) {
     modal,
     iframe,
     favicon,
+    domainSpan,
+    domainClickHandler,
+    domainKeydownHandler,
     keydownHandler,
     backdrop,
     backdropHandler,
@@ -657,6 +955,14 @@ function teardownModal(win) {
   }
   if (modal && modalClickHandler) {
     modal.removeEventListener('click', modalClickHandler);
+  }
+  if (domainSpan) {
+    if (domainClickHandler) {
+      domainSpan.removeEventListener('click', domainClickHandler);
+    }
+    if (domainKeydownHandler) {
+      domainSpan.removeEventListener('keydown', domainKeydownHandler);
+    }
   }
   if (closeBtn && closeHandler) {
     closeBtn.removeEventListener('click', closeHandler);
@@ -786,6 +1092,43 @@ function unregisterHostServiceWorkers(win) {
 }
 
 /**
+ * Resolves the favicon URL directly from the preview target origin (zero Google lookups).
+ * Checks for same-origin declared link[rel*="icon"] in active document if origins match,
+ * otherwise directly resolves ${targetOrigin}/favicon.ico.
+ * @param {object} urlDetails 
+ * @param {Document} [doc] 
+ * @param {Window} [win] 
+ * @returns {string}
+ */
+function resolveFaviconUrl(urlDetails, doc, win) {
+  try {
+    const parsed = new URL(urlDetails.fullUrl);
+    const targetOrigin = parsed.origin;
+    const currentOrigin = win?.location?.origin || (doc?.location?.origin) || '';
+
+    // Check same-origin declared icon links in the active document
+    if (currentOrigin && currentOrigin === targetOrigin && doc) {
+      const iconEl = doc.querySelector('link[rel~="icon"]') || doc.querySelector('link[rel*="icon"]');
+      if (iconEl) {
+        const href = iconEl.getAttribute('href') || iconEl.href;
+        if (href) {
+          try {
+            return new URL(href, currentOrigin).href;
+          } catch {}
+        }
+      }
+    }
+
+    // Direct origin favicon.ico
+    return `${targetOrigin}/favicon.ico`;
+  } catch {
+    const proto = urlDetails?.protocol || 'https:';
+    const host = urlDetails?.hostname || 'example.com';
+    return `${proto}//${host}/favicon.ico`;
+  }
+}
+
+/**
  * Mounts the isolated Shadow DOM preview modal on document.documentElement.
  * @param {string} targetUrl 
  * @param {object} [options]
@@ -827,7 +1170,8 @@ function mountModal(arg0, arg1, arg2) {
     teardownModal(win);
   }
 
-  const urlDetails = parseUrlDetails(targetUrl, doc.baseURI);
+  const cleanTargetUrl = stripTrackingParameters(targetUrl);
+  const urlDetails = parseUrlDetails(cleanTargetUrl, doc.baseURI);
   if (!urlDetails) return null;
 
   const sizePreset = options.sizePreset || activeSettings.sizePreset || activeSettings.modalSize || 'default';
@@ -921,7 +1265,7 @@ function mountModal(arg0, arg1, arg2) {
 
   const favicon = doc.createElement('img');
   favicon.className = 'peek-wave-favicon';
-  favicon.src = `https://www.google.com/s2/favicons?domain=${urlDetails.hostname}&sz=32`;
+  favicon.src = resolveFaviconUrl(urlDetails, doc, win);
   favicon.alt = '';
   const faviconErrorHandler = () => {
     favicon.style.display = 'none';
@@ -931,6 +1275,10 @@ function mountModal(arg0, arg1, arg2) {
   const domainSpan = doc.createElement('span');
   domainSpan.className = 'peek-wave-domain';
   domainSpan.textContent = urlDetails.displayDomain;
+  domainSpan.setAttribute('role', 'button');
+  domainSpan.setAttribute('tabindex', '0');
+  domainSpan.title = 'Click to copy link';
+  domainSpan.setAttribute('aria-label', 'Copy link to clipboard');
 
   const spinner = doc.createElement('div');
   spinner.className = 'peek-wave-loader-spinner';
@@ -964,11 +1312,16 @@ function mountModal(arg0, arg1, arg2) {
   copyBtn.appendChild(copyTooltip);
 
   let copyTimeout = null;
-  const copyHandler = (e) => {
-    e.stopPropagation();
+  const triggerCopy = (isDomainClick = false) => {
     if (copyTimeout) clearTimeout(copyTimeout);
     copyTooltip.textContent = 'Copied!';
     copyTooltip.classList.add('active');
+
+    domainSpan.classList.add('copied');
+    domainSpan.title = 'Copied!';
+    if (isDomainClick) {
+      domainSpan.textContent = 'Copied!';
+    }
 
     let copied = false;
     if (win.navigator?.clipboard?.writeText) {
@@ -991,12 +1344,37 @@ function mountModal(arg0, arg1, arg2) {
     copyTimeout = setTimeout(() => {
       copyTooltip.textContent = 'Copy';
       copyTooltip.classList.remove('active');
+      domainSpan.classList.remove('copied');
+      domainSpan.textContent = urlDetails.displayDomain;
+      domainSpan.title = 'Click to copy link';
       copyTimeout = null;
+      if (currentModal) currentModal.copyTimeout = null;
     }, 1500);
 
     if (currentModal) currentModal.copyTimeout = copyTimeout;
   };
+
+  const copyHandler = (e) => {
+    e.stopPropagation();
+    triggerCopy(false);
+  };
   copyBtn.addEventListener('click', copyHandler);
+
+  const domainClickHandler = (e) => {
+    e.stopPropagation();
+    triggerCopy(true);
+  };
+
+  const domainKeydownHandler = (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerCopy(true);
+    }
+  };
+
+  domainSpan.addEventListener('click', domainClickHandler);
+  domainSpan.addEventListener('keydown', domainKeydownHandler);
 
   // Open in New Tab Button
   const tabBtn = doc.createElement('button');
@@ -1014,7 +1392,7 @@ function mountModal(arg0, arg1, arg2) {
 
   const tabHandler = (e) => {
     e.stopPropagation();
-    const chromeObj = (typeof chrome !== 'undefined' && chrome) || win.chrome;
+    const chromeObj = win?.chrome || (typeof chrome !== 'undefined' ? chrome : null);
     if (chromeObj?.runtime?.sendMessage) {
       chromeObj.runtime.sendMessage({ action: 'OPEN_TAB', url: urlDetails.fullUrl });
     } else if (win.open) {
@@ -1133,6 +1511,9 @@ function mountModal(arg0, arg1, arg2) {
     backdrop,
     iframe,
     favicon,
+    domainSpan,
+    domainClickHandler,
+    domainKeydownHandler,
     closeBtn,
     tabBtn,
     copyBtn,
@@ -1152,6 +1533,37 @@ function mountModal(arg0, arg1, arg2) {
     iframeErrorHandler,
     faviconErrorHandler
   };
+
+  const isTco = urlDetails.hostname === 't.co' || urlDetails.hostname.endsWith('.t.co');
+  if (isTco) {
+    const activeModalInstance = currentModal;
+    const chromeObj = win?.chrome || (typeof chrome !== 'undefined' ? chrome : null);
+    if (chromeObj?.runtime?.sendMessage) {
+      try {
+        chromeObj.runtime.sendMessage(
+          { action: 'RESOLVE_URL', url: urlDetails.fullUrl },
+          (response) => {
+            if (!currentModal || currentModal !== activeModalInstance) return;
+
+            if (response && response.success && response.resolvedUrl && response.resolvedUrl !== urlDetails.fullUrl) {
+              const cleanResolved = stripTrackingParameters(response.resolvedUrl);
+              const newDetails = parseUrlDetails(cleanResolved, doc.baseURI);
+              if (newDetails && isNavigableHttp(newDetails)) {
+                domainSpan.textContent = newDetails.displayDomain;
+                domainSpan.title = 'Click to copy link';
+                favicon.src = resolveFaviconUrl(newDetails, doc, win);
+                urlDetails.fullUrl = newDetails.fullUrl;
+                urlDetails.hostname = newDetails.hostname;
+                urlDetails.displayDomain = newDetails.displayDomain;
+                urlDetails.protocol = newDetails.protocol;
+                iframe.src = newDetails.fullUrl;
+              }
+            }
+          }
+        );
+      } catch {}
+    }
+  }
 
   return currentModal;
 }
@@ -1365,10 +1777,14 @@ if (typeof module !== 'undefined' && module.exports) {
     getAnchorRawHref,
     parseUrlDetails,
     isModifierActive,
+    isValidHttpUrl,
+    stripTrackingParameters,
+    unwrapForwarderAnchor,
     extractAnchorUrl,
     isNavigableHttp,
     mountModal,
     teardownModal,
+    resolveFaviconUrl,
     unregisterHostServiceWorkers,
     handleCaptureClick,
     initContentScript,

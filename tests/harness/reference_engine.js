@@ -173,6 +173,32 @@ function createReferenceEngine() {
     return svg;
   }
 
+  function resolveFaviconUrl(urlDetails, doc, win) {
+    try {
+      const parsed = new URL(urlDetails.fullUrl);
+      const targetOrigin = parsed.origin;
+      const currentOrigin = win?.location?.origin || (doc?.location?.origin) || '';
+
+      if (currentOrigin && currentOrigin === targetOrigin && doc) {
+        const iconEl = doc.querySelector('link[rel~="icon"]') || doc.querySelector('link[rel*="icon"]');
+        if (iconEl) {
+          const href = iconEl.getAttribute('href') || iconEl.href;
+          if (href) {
+            try {
+              return new URL(href, currentOrigin).href;
+            } catch {}
+          }
+        }
+      }
+
+      return `${targetOrigin}/favicon.ico`;
+    } catch {
+      const proto = urlDetails?.protocol || 'https:';
+      const host = urlDetails?.hostname || 'example.com';
+      return `${proto}//${host}/favicon.ico`;
+    }
+  }
+
   function mountModal(win, chrome, targetUrl) {
     if (currentModal) {
       teardownModal(win);
@@ -207,7 +233,7 @@ function createReferenceEngine() {
 
     const favicon = doc.createElement('img');
     favicon.className = 'peek-wave-favicon';
-    favicon.src = `https://www.google.com/s2/favicons?domain=${urlDetails.hostname}&sz=32`;
+    favicon.src = resolveFaviconUrl(urlDetails, doc, win);
 
     const domainSpan = doc.createElement('span');
     domainSpan.className = 'peek-wave-domain';
@@ -441,6 +467,10 @@ function createReferenceEngine() {
         sendResponse({ success: true });
         return false;
       }
+      if (message && (message.action === 'RESOLVE_URL' || message.action === 'resolveUrl' || message.action === 'UNWRAP_URL')) {
+        sendResponse({ success: true, resolvedUrl: message.url });
+        return true;
+      }
     };
 
     chrome.runtime.onMessage.addListener(handler);
@@ -515,6 +545,7 @@ function createReferenceEngine() {
     isNavigableHttp,
     mountModal,
     teardownModal,
+    resolveFaviconUrl,
     initContentScript,
     initBackgroundWorker,
     initPopup,

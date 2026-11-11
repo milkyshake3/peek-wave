@@ -43,11 +43,7 @@ temp/
 tmp/
 
 # Hidden workspace & cache files
-.agents/
-.gemini/
-*.agent/
-AGENT_HANDOFF.md
-*HANDOFF*.md
+*_FUTURE.md
 
 # --- IDE & Editor Metadata ---
 .vscode/

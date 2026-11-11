@@ -16,6 +16,7 @@ const { runAdversarialIconTests } = require('./icons_binary_adversarial.test');
 const { runTeardownMemoryAdversarialTests } = require('./teardown_memory_adversarial.test');
 const { runM2RemediationAdversarialTests } = require('./m2_remediation_adversarial.test');
 const { runM3StoragePopupAdversarialTests } = require('./m3_storage_popup_adversarial.test');
+const { runTwitterUnforwardingAdversarialTests } = require('./twitter_unforwarding_adversarial.test');
 
 async function main() {
   console.log('\n===============================================================');
@@ -27,6 +28,7 @@ async function main() {
   let teardownResult = { passed: 0, failed: 0 };
   let m2RemResult = { passed: 0, failed: 0 };
   let m3Result = { passed: 0, failed: 0 };
+  let twitterResult = { passed: 0, failed: 0 };
 
   try {
     bgResult = await runAdversarialBackgroundTests();
@@ -63,8 +65,15 @@ async function main() {
     m3Result.failed++;
   }
 
-  const totalPassed = bgResult.passed + iconResult.totalPass + teardownResult.passed + m2RemResult.passed + m3Result.passed;
-  const totalFailed = bgResult.failed + iconResult.totalFail + teardownResult.failed + m2RemResult.failed + m3Result.failed;
+  try {
+    twitterResult = await runTwitterUnforwardingAdversarialTests();
+  } catch (err) {
+    console.error('Fatal error during Twitter unforwarding adversarial suite:', err);
+    twitterResult.failed++;
+  }
+
+  const totalPassed = bgResult.passed + iconResult.totalPass + teardownResult.passed + m2RemResult.passed + m3Result.passed + twitterResult.passed;
+  const totalFailed = bgResult.failed + iconResult.totalFail + teardownResult.failed + m2RemResult.failed + m3Result.failed + twitterResult.failed;
 
   console.log('\n===============================================================');
   console.log('              ADVERSARIAL VERIFICATION SUMMARY                 ');
@@ -74,6 +83,7 @@ async function main() {
   console.log(`- Teardown & Memory Adversarial Tests:  ${teardownResult.passed} Passed, ${teardownResult.failed} Failed`);
   console.log(`- M2 Remediation Stress Tests:          ${m2RemResult.passed} Passed, ${m2RemResult.failed} Failed`);
   console.log(`- M3 Storage & Popup Stress Tests:      ${m3Result.passed} Passed, ${m3Result.failed} Failed`);
+  console.log(`- Twitter/X Unforwarding Tests:         ${twitterResult.passed} Passed, ${twitterResult.failed} Failed`);
   console.log(`- TOTAL PASSED:                         ${totalPassed}`);
   console.log(`- TOTAL FAILED:                         ${totalFailed}`);
   console.log(`- OVERALL STATUS:                       ${totalFailed === 0 ? 'ALL CHECKS PASSED (APPROVE)' : 'FAILURES DETECTED (REQUEST_CHANGES)'}`);

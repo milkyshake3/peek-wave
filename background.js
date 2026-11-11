@@ -233,6 +233,165 @@ function clearFramingCaches() {
   });
 }
 
+/**
+ * Strips tracking and attribution parameters from a URL while strictly preserving
+ * functional parameters (such as YouTube timestamps, video IDs, search queries, pagination).
+ * @param {string} rawUrl 
+ * @returns {string} Clean URL
+ */
+function stripTrackingParameters(rawUrl) {
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.toLowerCase();
+    const isYouTube = host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be';
+    const isTwitter = host === 'x.com' || host === 'twitter.com' || host.endsWith('.x.com') || host.endsWith('.twitter.com');
+
+    // Universal tracking parameter patterns safe to remove on all websites
+    const universalTrackers = [
+      /^utm_[a-z0-9_]+$/i,
+      /^fbclid$/i,
+      /^gclid$/i,
+      /^gclsrc$/i,
+      /^dclid$/i,
+      /^msclkid$/i,
+      /^twclid$/i,
+      /^ref_src$/i,
+      /^ref_url$/i,
+      /^twsrc$/i,
+      /^mc_eid$/i,
+      /^mc_cid$/i,
+      /^igshid$/i,
+      /^_hsenc$/i,
+      /^_hsmi$/i
+    ];
+
+    const keysToRemove = [];
+
+    for (const key of parsed.searchParams.keys()) {
+      // 1. Universal tracking parameters
+      if (universalTrackers.some((re) => re.test(key))) {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      // 2. Twitter-specific tracking parameters (s, t) on Twitter/X domains
+      if (isTwitter && (key === 's' || key === 't')) {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      // 3. Twitter share parameters on non-YouTube target URLs
+      if (!isYouTube && (key === 'ref' || key === 's')) {
+        keysToRemove.push(key);
+        continue;
+      }
+    }
+
+    for (const key of keysToRemove) {
+      parsed.searchParams.delete(key);
+    }
+
+    return parsed.href;
+  } catch {
+    return rawUrl;
+  }
+}
+
+/**
+ * Resolves a redirect or forwarder URL (such as t.co) to its canonical destination.
+ * Follows HTTP 301/302 redirects, or parses HTML meta-refresh / location.replace for t.co responses.
+ * Enforces a 3-second timeout, validates the destination protocol (http/https only),
+ * and strips tracking parameters.
+ * @param {string} rawUrl 
+ * @param {chrome.runtime.MessageSender} [sender]
+ * @returns {Promise<string>}
+ */
+async function resolveRedirectUrl(rawUrl, sender) {
+  const sanitized = validateAndSanitizeUrl(rawUrl, sender);
+
+  // If already a non-forwarder URL, return cleaned URL directly
+  try {
+    const parsed = new URL(sanitized);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 't.co' && !host.endsWith('.t.co')) {
+      return stripTrackingParameters(sanitized);
+    }
+  } catch {
+    return stripTrackingParameters(sanitized);
+  }
+
+  if (typeof fetch !== 'function') {
+    return stripTrackingParameters(sanitized);
+  }
+
+  let controller = null;
+  let timer = null;
+  let signal = undefined;
+  if (typeof AbortController === 'function') {
+    controller = new AbortController();
+    signal = controller.signal;
+    timer = setTimeout(() => {
+      try { controller.abort(); } catch {}
+    }, 3000);
+  }
+
+  try {
+    const response = await fetch(sanitized, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      signal
+    });
+    if (timer) clearTimeout(timer);
+
+    let destinationUrl = response.url;
+
+    // If destination is away from t.co, we followed an HTTP redirect
+    try {
+      if (destinationUrl) {
+        const destParsed = new URL(destinationUrl);
+        const destHost = destParsed.hostname.toLowerCase();
+        if (destHost !== 't.co' && !destHost.endsWith('.t.co')) {
+          const validated = validateAndSanitizeUrl(destinationUrl, sender);
+          return stripTrackingParameters(validated);
+        }
+      }
+    } catch {}
+
+    // Otherwise, check response body for meta-refresh or location.replace
+    if (typeof response.text === 'function') {
+      const body = await response.text();
+
+      // 1. Meta refresh: <meta http-equiv="refresh" content="0;URL=https://...">
+      const metaMatch = body.match(/<meta[^>]*http-equiv=["']?refresh["']?[^>]*content=["']?[0-9]*;\s*URL=([^"'>\s]+)["']?/i);
+      if (metaMatch && metaMatch[1]) {
+        let extracted = metaMatch[1].trim();
+        extracted = extracted.replace(/\\(['"/])/g, '$1');
+        const validated = validateAndSanitizeUrl(extracted, sender);
+        return stripTrackingParameters(validated);
+      }
+
+      // 2. JavaScript location.replace("https:\/\/...") or location.href = "..."
+      const jsMatch = body.match(/location\.(?:replace|href)\s*\(?\s*["']([^"']+)["']\s*\)?/i);
+      if (jsMatch && jsMatch[1]) {
+        let extracted = jsMatch[1].trim();
+        extracted = extracted.replace(/\\(['"/])/g, '$1');
+        const validated = validateAndSanitizeUrl(extracted, sender);
+        return stripTrackingParameters(validated);
+      }
+    }
+
+    return stripTrackingParameters(sanitized);
+  } catch {
+    if (timer) clearTimeout(timer);
+    return stripTrackingParameters(sanitized);
+  }
+}
+
 // Proactively clear framing caches on background initialization
 clearFramingCaches().catch(() => {});
 
@@ -320,6 +479,18 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
       return true;
     }
 
+    // Handle RESOLVE_URL / resolveUrl / UNWRAP_URL action
+    if (action === 'RESOLVE_URL' || action === 'resolveUrl' || action === 'UNWRAP_URL') {
+      resolveRedirectUrl(message.url, sender)
+        .then((resolvedUrl) => {
+          sendResponse({ success: true, resolvedUrl });
+        })
+        .catch((err) => {
+          sendResponse({ success: false, error: err.message || String(err), fallbackUrl: message.url });
+        });
+      return true;
+    }
+
     return false;
   });
 }
@@ -353,6 +524,8 @@ if (typeof module !== 'undefined' && module.exports) {
     validateAndSanitizeUrl,
     createTab,
     handleOpenTab,
-    clearFramingCaches
+    clearFramingCaches,
+    resolveRedirectUrl,
+    stripTrackingParameters
   };
 }

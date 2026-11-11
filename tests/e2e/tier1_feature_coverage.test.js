@@ -557,7 +557,7 @@ describe('Tier 1: Feature Coverage', () => {
       assert.strictEqual(domainEl.textContent, 'wikipedia.org');
     });
 
-    test('T1.F8.2: Header displays favicon image pointing to google favicon service', () => {
+    test('T1.F8.2: Header displays direct origin favicon without external Google lookups', () => {
       const env = setupTestEnvironment();
       const link = env.doc.createElement('a');
       link.href = 'https://github.com/nodejs/node';
@@ -567,7 +567,8 @@ describe('Tier 1: Feature Coverage', () => {
       const host = env.doc.getElementById('peek-wave-host');
       const favicon = host.shadowRoot.querySelector('.peek-wave-favicon');
       assert.ok(favicon);
-      assert.ok(favicon.src.includes('https://www.google.com/s2/favicons?domain=github.com'));
+      assert.strictEqual(favicon.src, 'https://github.com/favicon.ico');
+      assert.strictEqual(favicon.src.includes('google.com'), false);
     });
 
     test('T1.F8.3: Header contains loading spinner element', () => {

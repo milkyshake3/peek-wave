@@ -245,6 +245,62 @@ describe('Tier 4: Real-World Application Scenarios', () => {
       assert.strictEqual(unregistered, true, 'Service worker on host page must be unregistered');
       env.teardown();
     });
+
+    test('T4.S2.9: Clicking tweet link with title attribute unwraps raw destination and cleans tracking parameters', () => {
+      const env = setupTestEnvironment();
+      const link = env.doc.createElement('a');
+      link.href = 'https://t.co/article123';
+      link.setAttribute('title', 'https://www.theverge.com/tech/2026/future-ai?utm_source=twitter&utm_medium=social');
+      link.textContent = 'theverge.com/tech/2026/fut…';
+      env.doc.body.appendChild(link);
+
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const modal = env.getModal();
+      assert.ok(modal !== null, 'Modal must be mounted');
+      assert.strictEqual(modal.iframe.src, 'https://www.theverge.com/tech/2026/future-ai', 'Must load unwrapped target with UTM stripped');
+      const domainPill = modal.shadowRoot.querySelector('.peek-wave-domain');
+      assert.strictEqual(domainPill.textContent, 'theverge.com', 'Domain pill must display clean destination domain');
+      env.teardown();
+    });
+
+    test('T4.S2.10: Clicking tweet card with data-expanded-url unwraps directly without framing t.co', () => {
+      const env = setupTestEnvironment();
+      const card = env.doc.createElement('div');
+      card.setAttribute('data-testid', 'card.wrapper');
+      card.setAttribute('data-expanded-url', 'https://github.com/google/gemini?ref_src=twsrc');
+
+      const cardLink = env.doc.createElement('a');
+      cardLink.href = 'https://t.co/cardShort123';
+      const cardText = env.doc.createElement('span');
+      cardText.textContent = 'Google Gemini Source';
+      cardLink.appendChild(cardText);
+      card.appendChild(cardLink);
+      env.doc.body.appendChild(card);
+
+      cardText.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const modal = env.getModal();
+      assert.ok(modal !== null);
+      assert.strictEqual(modal.iframe.src, 'https://github.com/google/gemini');
+      env.teardown();
+    });
+
+    test('T4.S2.11: Clicking YouTube link in tweet feed preserves timestamp parameter t=30s while stripping utm_source', () => {
+      const env = setupTestEnvironment();
+      const link = env.doc.createElement('a');
+      link.href = 'https://t.co/ytVideoShort';
+      link.setAttribute('title', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s&utm_source=twitter');
+      link.textContent = 'youtube.com/watch?v=dQw4w…';
+      env.doc.body.appendChild(link);
+
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: true, button: 0 }));
+
+      const modal = env.getModal();
+      assert.ok(modal !== null);
+      assert.strictEqual(modal.iframe.src, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s', 'YouTube timestamp t=30s must be preserved');
+      env.teardown();
+    });
   });
 
   // --------------------------------------------------------------------------
