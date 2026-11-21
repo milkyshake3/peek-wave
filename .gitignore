@@ -4,6 +4,7 @@
 
 
 # --- Chromium & Browser Extension Artifacts ---
+.agents/
 _metadata/
 *.crx
 *.pem

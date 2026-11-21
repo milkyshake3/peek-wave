@@ -17,7 +17,8 @@ const DEFAULT_SETTINGS = {
   modifierKey: 'Shift',
   modalSize: 'default',
   sizePreset: 'default',
-  growAnimation: true
+  growAnimation: true,
+  theme: 'dark'
 };
 
 /**
@@ -457,9 +458,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
 
     // Handle GET_SETTINGS request
     if (action === 'GET_SETTINGS' || action === 'getSettings') {
-      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation'])
+      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation', 'theme'])
         .then((settings) => {
-          sendResponse({ success: true, settings });
+          const resolvedSettings = {
+            theme: DEFAULT_SETTINGS.theme,
+            ...settings
+          };
+          if (!resolvedSettings.theme) {
+            resolvedSettings.theme = DEFAULT_SETTINGS.theme;
+          }
+          sendResponse({ success: true, settings: resolvedSettings });
         })
         .catch((err) => {
           sendResponse({ success: false, error: err.message || String(err) });

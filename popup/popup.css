@@ -1,41 +1,59 @@
 /* ==========================================================================
-   Peek Wave - Settings Toolbar Popup Stylesheet
-   Design Language: Modern Dark Slate + Indigo Violet Accent
+   Peek Wave — Minimalist Monochrome Control Center Stylesheet
+   Aesthetic: Pure Black (#000000) & Pure White (#ffffff)
    Zero-Layout Shift, Hardware Accelerated, Fully Accessible (WCAG 2.1 AA)
    ========================================================================== */
 
-:root {
-  /* Color Palette */
-  --bg-base: #0f172a;               /* Deep Slate 900 */
-  --bg-card: #1e1e2e;               /* Rich Dark Surface */
-  --bg-card-hover: #26263b;         /* Interactive Surface Hover */
-  --bg-control: #12131f;            /* Recessed Segmented Track */
+/* --------------------------------------------------------------------------
+   Theme Variables: Dark (Default) & Light Modes
+   -------------------------------------------------------------------------- */
+:root,
+:root[data-theme="dark"],
+body[data-theme="dark"] {
+  /* Dark Mode: Pure Black & Crisp High-Contrast White */
+  --bg-base: #000000;
+  --bg-card: #080808;
+  --bg-card-hover: #121212;
+  --bg-control: #0c0c0c;
   
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.16);
-  --border-focus: #38bdf8;          /* Sky 400 */
+  --border-subtle: #222222;
+  --border-hover: #444444;
+  --border-focus: #ffffff;
   
-  --text-primary: #f8fafc;          /* Slate 50 */
-  --text-secondary: #94a3b8;        /* Slate 400 */
-  --text-muted: #64748b;            /* Slate 500 */
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
   
-  --accent-primary: #38bdf8;        /* Sky 400 */
-  --accent-hover: #7dd3fc;          /* Sky 300 */
-  --accent-active: #0284c7;         /* Sky 600 */
-  --accent-glow: rgba(56, 189, 248, 0.35);
+  --accent-primary: #ffffff;
+  --accent-text: #000000;
+  --accent-hover: #eaeaea;
+  --accent-active: #cccccc;
+  --accent-glow: rgba(255, 255, 255, 0.2);
   
-  --wave-cyan: #38bdf8;             /* Sky 400 */
-  --wave-teal: #06b6d4;             /* Cyan 500 */
+  --status-active: #ffffff;
+  --status-active-bg: rgba(255, 255, 255, 0.1);
+  --status-active-border: rgba(255, 255, 255, 0.3);
+  --status-disabled: #666666;
+  --status-disabled-bg: rgba(255, 255, 255, 0.03);
+  --status-disabled-border: #333333;
   
-  --status-active: #10b981;         /* Emerald 500 */
-  --status-active-bg: rgba(16, 185, 129, 0.15);
-  --status-disabled: #64748b;       /* Slate 500 */
-  --status-disabled-bg: rgba(100, 116, 139, 0.15);
+  --slider-off-bg: #222222;
+  --slider-knob-off: #777777;
+  --slider-on-bg: #ffffff;
+  --slider-knob-on: #000000;
   
+  --pill-hover-bg: rgba(255, 255, 255, 0.08);
+  --btn-bg: #0c0c0c;
+  --btn-border: #222222;
+  --btn-color: #ffffff;
+  --badge-bg: rgba(255, 255, 255, 0.08);
+  --badge-color: #a0a0a0;
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+
   /* Geometry & Typography */
   --popup-width: 320px;
   --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --radius-lg: 12px;
+  --radius-lg: 10px;
   --radius-md: 8px;
   --radius-sm: 6px;
   --radius-pill: 9999px;
@@ -44,37 +62,49 @@
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 140ms;
   --duration-normal: 200ms;
-
-  /* Liquid Glass Aesthetics */
-  --card-glass-blur: blur(16px);
-  --card-specular-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-  --slider-off-bg: #334155;
-  --pill-hover-bg: rgba(255, 255, 255, 0.04);
 }
 
-@supports (color: AccentColor) {
-  :root {
-    --accent-primary: AccentColor;
-    --border-focus: AccentColor;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-base: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.82);
-    --bg-card-hover: rgba(255, 255, 255, 0.92);
-    --bg-control: rgba(226, 232, 240, 0.75);
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --border-hover: rgba(0, 0, 0, 0.15);
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --card-glass-blur: blur(16px);
-    --card-specular-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.95);
-    --slider-off-bg: #cbd5e1;
-    --pill-hover-bg: rgba(0, 0, 0, 0.04);
-  }
+:root[data-theme="light"],
+body[data-theme="light"] {
+  /* Light Mode: Pure White & Crisp Pitch-Black */
+  --bg-base: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f7f7;
+  --bg-control: #f2f2f2;
+  
+  --border-subtle: #e5e5e5;
+  --border-hover: #b0b0b0;
+  --border-focus: #000000;
+  
+  --text-primary: #000000;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  
+  --accent-primary: #000000;
+  --accent-text: #ffffff;
+  --accent-hover: #222222;
+  --accent-active: #333333;
+  --accent-glow: rgba(0, 0, 0, 0.12);
+  
+  --status-active: #000000;
+  --status-active-bg: rgba(0, 0, 0, 0.06);
+  --status-active-border: rgba(0, 0, 0, 0.25);
+  --status-disabled: #888888;
+  --status-disabled-bg: rgba(0, 0, 0, 0.03);
+  --status-disabled-border: #d4d4d4;
+  
+  --slider-off-bg: #e0e0e0;
+  --slider-knob-off: #ffffff;
+  --slider-on-bg: #000000;
+  --slider-knob-on: #ffffff;
+  
+  --pill-hover-bg: rgba(0, 0, 0, 0.05);
+  --btn-bg: #f5f5f5;
+  --btn-border: #e0e0e0;
+  --btn-color: #000000;
+  --badge-bg: rgba(0, 0, 0, 0.06);
+  --badge-color: #555555;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* --------------------------------------------------------------------------
@@ -106,6 +136,8 @@ html, body {
   overflow-x: hidden;
   user-select: none;
   -webkit-user-select: none;
+  transition: background-color var(--duration-normal) var(--ease-spring),
+              color var(--duration-normal) var(--ease-spring);
 }
 
 /* --------------------------------------------------------------------------
@@ -119,7 +151,7 @@ html, body {
 }
 
 /* --------------------------------------------------------------------------
-   3. Header Bar
+   3. Header Bar & Controls
    -------------------------------------------------------------------------- */
 .popup-header {
   display: flex;
@@ -127,9 +159,9 @@ html, body {
   justify-content: space-between;
   padding: 12px 14px;
   background-color: var(--bg-card);
-  backdrop-filter: var(--card-glass-blur, blur(16px));
-  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border-bottom: 1px solid var(--border-subtle);
+  transition: background-color var(--duration-normal) var(--ease-spring),
+              border-color var(--duration-normal) var(--ease-spring);
 }
 
 .brand {
@@ -144,7 +176,6 @@ html, body {
   border-radius: var(--radius-sm);
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .brand-text {
@@ -165,8 +196,43 @@ html, body {
   font-weight: 600;
   padding: 1px 5px;
   border-radius: var(--radius-pill);
-  background-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  background-color: var(--badge-bg);
+  color: var(--badge-color);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background-color: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-sm);
+  color: var(--btn-color);
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--duration-fast) var(--ease-spring);
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--border-hover);
+  background-color: var(--pill-hover-bg);
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.theme-toggle-btn svg {
+  display: block;
 }
 
 .status-pill {
@@ -180,13 +246,13 @@ html, body {
 .status-pill.active {
   background-color: var(--status-active-bg);
   color: var(--status-active);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid var(--status-active-border);
 }
 
 .status-pill.disabled {
   background-color: var(--status-disabled-bg);
   color: var(--status-disabled);
-  border: 1px solid rgba(100, 116, 139, 0.25);
+  border: 1px solid var(--status-disabled-border);
 }
 
 /* --------------------------------------------------------------------------
@@ -201,12 +267,10 @@ html, body {
 
 .setting-card {
   background-color: var(--bg-card);
-  backdrop-filter: var(--card-glass-blur, blur(16px));
-  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 11px 12px;
-  box-shadow: var(--card-specular-shadow);
+  box-shadow: var(--card-shadow);
   transition: border-color var(--duration-fast) var(--ease-spring),
               background-color var(--duration-fast) var(--ease-spring),
               box-shadow var(--duration-fast) var(--ease-spring);
@@ -220,7 +284,6 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid var(--border-subtle);
 }
 
 .card-header-row {
@@ -286,32 +349,37 @@ html, body {
 .slider {
   position: absolute;
   inset: 0;
-  background-color: var(--slider-off-bg, #334155);
+  background-color: var(--slider-off-bg);
   border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
   transition: background-color var(--duration-normal) var(--ease-spring),
+              border-color var(--duration-normal) var(--ease-spring),
               box-shadow var(--duration-normal) var(--ease-spring);
 }
 
 .slider::before {
   content: "";
   position: absolute;
-  height: 18px;
-  width: 18px;
+  height: 16px;
+  width: 16px;
   left: 3px;
   bottom: 3px;
-  background-color: #ffffff;
+  background-color: var(--slider-knob-off);
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
-  transition: transform var(--duration-normal) var(--ease-spring);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform var(--duration-normal) var(--ease-spring),
+              background-color var(--duration-normal) var(--ease-spring);
 }
 
 .switch input:checked + .slider {
-  background-color: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-glow);
+  background-color: var(--slider-on-bg);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .switch input:checked + .slider::before {
   transform: translateX(20px);
+  background-color: var(--slider-knob-on);
 }
 
 .switch input:focus-visible + .slider {
@@ -329,7 +397,9 @@ html, body {
   background-color: var(--bg-control);
   padding: 3px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-subtle);
+  transition: background-color var(--duration-normal) var(--ease-spring),
+              border-color var(--duration-normal) var(--ease-spring);
 }
 
 .segment-option {
@@ -362,7 +432,7 @@ html, body {
 
 .segment-option:hover .segment-pill {
   color: var(--text-primary);
-  background-color: var(--pill-hover-bg, rgba(255, 255, 255, 0.04));
+  background-color: var(--pill-hover-bg);
 }
 
 .pill-key {
@@ -387,12 +457,13 @@ html, body {
 
 .segment-option input[type="radio"]:checked + .segment-pill {
   background-color: var(--accent-primary);
-  color: #ffffff;
-  box-shadow: 0 2px 8px var(--accent-glow);
+  color: var(--accent-text);
+  box-shadow: 0 1px 4px var(--accent-glow);
 }
 
 .segment-option input[type="radio"]:checked + .segment-pill .pill-action {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--accent-text);
+  opacity: 0.85;
 }
 
 .segment-option input[type="radio"]:focus-visible + .segment-pill {
@@ -420,7 +491,8 @@ html, body {
 }
 
 .segment-option input[type="radio"]:checked + .segment-pill .pill-dim {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--accent-text);
+  opacity: 0.85;
 }
 
 /* --------------------------------------------------------------------------
@@ -432,9 +504,9 @@ html, body {
   gap: 8px;
   padding: 10px 14px 12px;
   background-color: var(--bg-card);
-  backdrop-filter: var(--card-glass-blur, blur(16px));
-  -webkit-backdrop-filter: var(--card-glass-blur, blur(16px));
   border-top: 1px solid var(--border-subtle);
+  transition: background-color var(--duration-normal) var(--ease-spring),
+              border-color var(--duration-normal) var(--ease-spring);
 }
 
 .footer-hint {
@@ -447,7 +519,7 @@ html, body {
 
 .hint-icon {
   flex-shrink: 0;
-  color: var(--wave-cyan);
+  color: var(--text-secondary);
 }
 
 .hint-text {
@@ -476,7 +548,7 @@ html, body {
 }
 
 .link-btn:hover {
-  color: var(--accent-hover);
+  color: var(--text-primary);
   text-decoration: underline;
 }
 
@@ -488,7 +560,7 @@ html, body {
 
 .footer-divider {
   font-size: 9px;
-  color: var(--border-hover);
+  color: var(--border-subtle);
 }
 
 /* Non-Shifting Save Status Notification */
@@ -502,7 +574,7 @@ html, body {
 .save-status {
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--status-active);
+  color: var(--text-primary);
   opacity: 0;
   transform: translateY(1px);
   transition: opacity var(--duration-normal) var(--ease-spring),
@@ -534,11 +606,10 @@ html, body {
    9. Disabled State Styling
    -------------------------------------------------------------------------- */
 body.extension-disabled .segmented-control {
-  opacity: 0.55;
+  opacity: 0.45;
   pointer-events: none;
-  filter: grayscale(0.2);
 }
 
 body.extension-disabled .group-card {
-  opacity: 0.7;
+  opacity: 0.6;
 }

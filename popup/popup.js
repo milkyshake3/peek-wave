@@ -3,11 +3,12 @@
  * 
  * Responsibilities:
  * 1. Reads current preferences on startup and populates UI inputs.
- * 2. Bidirectionally synchronizes modern radio pills and accessible select controls.
- * 3. Binds immediate change listeners to toggle, modifier dropdown, and size preset.
- * 4. Persists updates to chrome.storage.sync with local fallback via PeekWaveStorage.
- * 5. Updates visual badge, size hints, and UI status dynamically.
- * 6. Provides initPopup() export matching E2E test harness expectations.
+ * 2. Manages theme toggle between pure black ('dark') and pure white ('light') aesthetics.
+ * 3. Bidirectionally synchronizes modern radio pills and accessible select controls.
+ * 4. Binds immediate change listeners to toggle, modifier dropdown, and size preset.
+ * 5. Persists updates to chrome.storage.sync with local fallback via PeekWaveStorage.
+ * 6. Updates visual badge, size hints, theme icons, and UI status dynamically.
+ * 7. Provides initPopup() export matching E2E test harness expectations.
  */
 
 'use strict';
@@ -18,10 +19,11 @@
 const FallbackStorage = {
   DEFAULT_SETTINGS: {
     enabled: true,
-    modifierKey: 'Shift',
+    modifierKey: 'shift',
     modalSize: 'default',
     sizePreset: 'default',
-    growAnimation: true
+    growAnimation: true,
+    theme: 'dark'
   },
   normalizeModifierKey(key) {
     if (typeof key !== 'string') return 'shift';
@@ -35,14 +37,26 @@ const FallbackStorage = {
     const clean = size.trim().toLowerCase();
     if (clean === 'compact' || clean === 'large') return clean;
     return 'default';
+  },
+  normalizeTheme(theme) {
+    if (typeof theme !== 'string') return 'dark';
+    const clean = theme.trim().toLowerCase();
+    if (clean.includes('light') || clean.includes('white')) return 'light';
+    return 'dark';
   }
 };
+
+/**
+ * SVGs for theme toggle button (moon for dark mode, sun for light mode).
+ */
+const MOON_ICON_SVG = '<svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+const SUN_ICON_SVG = '<svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
 
 /**
  * Initializes the popup controller inside a browser or simulated DOM window.
  * @param {Window} [win] 
  * @param {object} [chromeObj] 
- * @returns {object} Controller instance with element handles and saveSettings()
+ * @returns {object} Controller instance with element handles, theme methods, and saveSettings()
  */
 function initPopup(win, chromeObj) {
   const targetWin = win || (typeof window !== 'undefined' ? window : globalThis);
@@ -62,6 +76,27 @@ function initPopup(win, chromeObj) {
 
   if (!Storage) {
     Storage = FallbackStorage;
+  }
+
+  function resolveNormalizeModifier(key) {
+    if (Storage && typeof Storage.normalizeModifierKey === 'function') {
+      return Storage.normalizeModifierKey(key);
+    }
+    return FallbackStorage.normalizeModifierKey(key);
+  }
+
+  function resolveNormalizeSize(size) {
+    if (Storage && typeof Storage.normalizeModalSize === 'function') {
+      return Storage.normalizeModalSize(size);
+    }
+    return FallbackStorage.normalizeModalSize(size);
+  }
+
+  function resolveNormalizeTheme(theme) {
+    if (Storage && typeof Storage.normalizeTheme === 'function') {
+      return Storage.normalizeTheme(theme);
+    }
+    return FallbackStorage.normalizeTheme(theme);
   }
 
   // Resolve DOM elements with dual-ID support for production UI and test fixtures
@@ -86,6 +121,9 @@ function initPopup(win, chromeObj) {
   let growToggleEl = targetDoc.getElementById('growAnimationToggle') ||
                      targetDoc.getElementById('toggle-grow-animation') ||
                      targetDoc.querySelector('input[name="growAnimation"]');
+
+  let themeToggleBtn = targetDoc.getElementById('themeToggleBtn') ||
+                       targetDoc.querySelector('.theme-toggle-btn');
 
   // In bare-DOM test environments (e.g. dom_simulator without HTML fixture), create missing elements
   if (!toggleEl && targetDoc.body) {
@@ -128,7 +166,7 @@ function initPopup(win, chromeObj) {
     targetDoc.body.appendChild(sizeSelect);
   }
 
-  // Patch getElementById on targetDoc so getElementById reliably returns toggleEl and growToggleEl
+  // Patch getElementById on targetDoc so getElementById reliably returns handles
   if (targetDoc && typeof targetDoc.getElementById === 'function') {
     const origGetById = targetDoc.getElementById.bind(targetDoc);
     targetDoc.getElementById = function (id) {
@@ -137,6 +175,9 @@ function initPopup(win, chromeObj) {
       }
       if (id === 'growAnimationToggle' || id === 'toggle-grow-animation') {
         return growToggleEl;
+      }
+      if (id === 'themeToggleBtn') {
+        return themeToggleBtn;
       }
       return origGetById(id);
     };
@@ -159,6 +200,37 @@ function initPopup(win, chromeObj) {
     const list = targetDoc.querySelectorAll('input[name="modalSize"]');
     return Array.from ? Array.from(list).filter(el => (el.getAttribute('type') || el.type || 'radio') === 'radio') : list;
   }
+
+  /**
+   * Theme management state & applicator
+   */
+  let currentTheme = 'dark';
+
+  function applyTheme(theme) {
+    const cleanTheme = resolveNormalizeTheme(theme);
+    currentTheme = cleanTheme;
+    if (targetDoc.documentElement && typeof targetDoc.documentElement.setAttribute === 'function') {
+      targetDoc.documentElement.setAttribute('data-theme', cleanTheme);
+    }
+    if (targetDoc.body && typeof targetDoc.body.setAttribute === 'function') {
+      targetDoc.body.setAttribute('data-theme', cleanTheme);
+    }
+    if (themeToggleBtn) {
+      themeToggleBtn.setAttribute('data-theme', cleanTheme);
+      if (cleanTheme === 'light') {
+        themeToggleBtn.setAttribute('aria-label', 'Switch to dark theme');
+        themeToggleBtn.setAttribute('title', 'Switch to dark theme');
+        themeToggleBtn.innerHTML = SUN_ICON_SVG;
+      } else {
+        themeToggleBtn.setAttribute('aria-label', 'Switch to light theme');
+        themeToggleBtn.setAttribute('title', 'Switch to light theme');
+        themeToggleBtn.innerHTML = MOON_ICON_SVG;
+      }
+    }
+  }
+
+  // Apply initial default theme synchronously
+  applyTheme('dark');
 
   /**
    * Synchronously sets default values so immediate microtask assertions in tests pass.
@@ -212,7 +284,7 @@ function initPopup(win, chromeObj) {
    */
   function updateSizeHint(sizeVal) {
     if (!sizeHint) return;
-    const cleanSize = Storage.normalizeModalSize(sizeVal);
+    const cleanSize = resolveNormalizeSize(sizeVal);
     if (cleanSize === 'compact') {
       sizeHint.textContent = 'Compact: 640×480';
     } else if (cleanSize === 'large') {
@@ -239,7 +311,7 @@ function initPopup(win, chromeObj) {
    * Synchronizes modifier radio pills with select element.
    */
   function syncModifierRadios(val) {
-    const cleanVal = Storage.normalizeModifierKey(val);
+    const cleanVal = resolveNormalizeModifier(val);
     const radios = getModifierRadios();
     for (const r of radios) {
       r.checked = (r.value === cleanVal);
@@ -253,7 +325,7 @@ function initPopup(win, chromeObj) {
    * Synchronizes modal size radio pills with select element.
    */
   function syncSizeRadios(val) {
-    const cleanVal = Storage.normalizeModalSize(val);
+    const cleanVal = resolveNormalizeSize(val);
     const radios = getSizeRadios();
     for (const r of radios) {
       r.checked = (r.value === cleanVal);
@@ -268,19 +340,19 @@ function initPopup(win, chromeObj) {
    * Populates inputs with stored settings asynchronously.
    */
   async function loadSettings() {
-    let settings = Storage.DEFAULT_SETTINGS;
+    let settings = Storage.DEFAULT_SETTINGS || FallbackStorage.DEFAULT_SETTINGS;
     if (typeof Storage.readSettings === 'function') {
       try {
         settings = await Storage.readSettings(targetChrome);
       } catch {
-        settings = Storage.DEFAULT_SETTINGS;
+        settings = Storage.DEFAULT_SETTINGS || FallbackStorage.DEFAULT_SETTINGS;
       }
     } else if (targetChrome?.storage) {
       const area = targetChrome.storage.sync || targetChrome.storage.local;
       if (area) {
         settings = await new Promise((resolve) => {
-          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation'], (res) => {
-            resolve({ ...Storage.DEFAULT_SETTINGS, ...(res || {}) });
+          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme'], (res) => {
+            resolve({ ...(Storage.DEFAULT_SETTINGS || FallbackStorage.DEFAULT_SETTINGS), ...(res || {}) });
           });
         });
       }
@@ -288,8 +360,9 @@ function initPopup(win, chromeObj) {
 
     const isEnabled = settings.enabled !== false;
     const isGrow = settings.growAnimation !== false;
-    const modKey = Storage.normalizeModifierKey(settings.modifierKey);
-    const sizeVal = Storage.normalizeModalSize(settings.modalSize || settings.sizePreset);
+    const modKey = resolveNormalizeModifier(settings.modifierKey);
+    const sizeVal = resolveNormalizeSize(settings.modalSize || settings.sizePreset);
+    const themeVal = resolveNormalizeTheme(settings.theme || 'dark');
 
     if (toggleEl) {
       toggleEl.checked = isEnabled;
@@ -306,6 +379,7 @@ function initPopup(win, chromeObj) {
 
     syncModifierRadios(modKey);
     syncSizeRadios(sizeVal);
+    applyTheme(themeVal);
     updateVisualState(isEnabled);
   }
 
@@ -317,15 +391,17 @@ function initPopup(win, chromeObj) {
   function saveSettings() {
     const isEnabled = toggleEl ? Boolean(toggleEl.checked) : true;
     const isGrow = growToggleEl ? Boolean(growToggleEl.checked) : true;
-    const modifierVal = modifierSelect ? Storage.normalizeModifierKey(modifierSelect.value) : 'shift';
-    const sizeVal = sizeSelect ? Storage.normalizeModalSize(sizeSelect.value) : 'default';
+    const modifierVal = modifierSelect ? resolveNormalizeModifier(modifierSelect.value) : 'shift';
+    const sizeVal = sizeSelect ? resolveNormalizeSize(sizeSelect.value) : 'default';
+    const themeVal = resolveNormalizeTheme(currentTheme);
 
     const newSettings = {
       enabled: isEnabled,
       modifierKey: modifierVal,
       modalSize: sizeVal,
       sizePreset: sizeVal,
-      growAnimation: isGrow
+      growAnimation: isGrow,
+      theme: themeVal
     };
 
     // Keep radio pills synchronized
@@ -388,6 +464,15 @@ function initPopup(win, chromeObj) {
     });
   }
 
+  // Theme toggle button click listener
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      saveSettings();
+    });
+  }
+
   // Bind change listeners to select elements
   if (toggleEl) {
     toggleEl.addEventListener('change', () => {
@@ -447,6 +532,7 @@ function initPopup(win, chromeObj) {
       if (sizeSelect) sizeSelect.value = 'default';
       syncModifierRadios('shift');
       syncSizeRadios('default');
+      applyTheme('dark');
       saveSettings();
     });
   }
@@ -468,6 +554,9 @@ function initPopup(win, chromeObj) {
     growToggleEl,
     modifierSelect,
     sizeSelect,
+    themeToggleBtn,
+    applyTheme,
+    getTheme: () => currentTheme,
     saveSettings,
     loadSettings
   };
@@ -497,6 +586,8 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     initPopup,
-    FallbackStorage
+    FallbackStorage,
+    MOON_ICON_SVG,
+    SUN_ICON_SVG
   };
 }

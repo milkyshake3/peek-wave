@@ -26,7 +26,8 @@ const MODAL_CSS_TEXT = `
 /* --------------------------------------------------------------------------
    1. Root Host & Universal Reset
    -------------------------------------------------------------------------- */
-:host {
+:host,
+:host([data-theme="dark"]) {
   all: initial !important;
   display: block !important;
   position: fixed !important;
@@ -36,16 +37,16 @@ const MODAL_CSS_TEXT = `
   z-index: 2147483647 !important;
   pointer-events: auto !important;
 
-  /* Theme Tokens - Dark Mode (Default) */
+  /* Theme Tokens - Dark Mode (Default) - Pure Black Aesthetic */
   --peek-accent: #38bdf8;
-  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(15, 23, 42, 0.50) 100%), rgba(15, 23, 42, 0.50);
-  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(30, 41, 59, 0.45) 100%), rgba(30, 41, 59, 0.45);
+  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(5, 5, 5, 0.90) 100%), #000000;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(5, 5, 5, 0.85) 100%), #050505;
   --peek-header-border: rgba(255, 255, 255, 0.14);
   --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
   --peek-border-glass: rgba(255, 255, 255, 0.18);
-  --peek-text-primary: #f8fafc;
+  --peek-text-primary: #ffffff;
   --peek-text-muted: #94a3b8;
-  --peek-shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.45), 0 8px 20px rgba(0, 0, 0, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+  --peek-shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.70), 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
   --peek-backdrop-bg: rgba(0, 0, 0, 0.40);
   --peek-btn-hover: rgba(255, 255, 255, 0.10);
   --peek-btn-close-hover: rgba(239, 68, 68, 0.20);
@@ -54,10 +55,55 @@ const MODAL_CSS_TEXT = `
   --peek-domain-active: rgba(255, 255, 255, 0.16);
   --peek-domain-border: rgba(255, 255, 255, 0.16);
   --peek-spinner-border: rgba(255, 255, 255, 0.18);
-  --peek-tooltip-bg: #1e293b;
+  --peek-tooltip-bg: #000000;
   --peek-tooltip-border: rgba(255, 255, 255, 0.16);
-  --peek-tooltip-text: #f8fafc;
-  --peek-iframe-bg: #0f172a;
+  --peek-tooltip-text: #ffffff;
+  --peek-iframe-bg: #000000;
+}
+
+:host([data-theme="light"]) {
+  /* Theme Tokens - Light Mode - Pure White Aesthetic */
+  --peek-backdrop-bg: rgba(0, 0, 0, 0.25);
+  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 50%, rgba(245, 245, 245, 0.95) 100%), #ffffff;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.92) 100%), #ffffff;
+  --peek-header-border: rgba(0, 0, 0, 0.10);
+  --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  --peek-border-glass: rgba(0, 0, 0, 0.15);
+  --peek-text-primary: #000000;
+  --peek-text-muted: #52525b;
+  --peek-shadow-glass: 0 20px 45px rgba(0, 0, 0, 0.12), 0 6px 15px rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  --peek-btn-hover: rgba(0, 0, 0, 0.06);
+  --peek-btn-close-hover: rgba(239, 68, 68, 0.12);
+  --peek-btn-close-color: #dc2626;
+  --peek-domain-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-active: rgba(0, 0, 0, 0.12);
+  --peek-domain-border: rgba(0, 0, 0, 0.12);
+  --peek-spinner-border: rgba(0, 0, 0, 0.15);
+  --peek-tooltip-bg: #ffffff;
+  --peek-tooltip-border: rgba(0, 0, 0, 0.15);
+  --peek-tooltip-text: #000000;
+  --peek-iframe-bg: #ffffff;
+}
+
+.peek-wave-modal[data-theme="dark"] {
+  background: var(--peek-glass-bg, #000000) !important;
+  border-color: var(--peek-border-glass, rgba(255, 255, 255, 0.18)) !important;
+}
+
+.peek-wave-modal[data-theme="light"] {
+  background: var(--peek-glass-bg, #ffffff) !important;
+  border-color: var(--peek-border-glass, rgba(0, 0, 0, 0.15)) !important;
+  --peek-text-primary: #000000;
+  --peek-text-muted: #52525b;
+  --peek-iframe-bg: #ffffff;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.92) 100%), #ffffff;
+  --peek-header-border: rgba(0, 0, 0, 0.10);
+  --peek-border-glass: rgba(0, 0, 0, 0.15);
+  --peek-btn-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-border: rgba(0, 0, 0, 0.12);
+  --peek-tooltip-bg: #ffffff;
+  --peek-tooltip-text: #000000;
 }
 
 @supports (color: AccentColor) {
@@ -379,7 +425,7 @@ const MODAL_CSS_TEXT = `
   width: 100% !important;
   height: calc(100% - 44px) !important;
   position: relative !important;
-  background: var(--peek-iframe-bg, #0f172a) !important;
+  background: var(--peek-iframe-bg, #000000) !important;
   overflow: hidden !important;
   contain: strict !important;
   isolation: isolate !important;
@@ -478,7 +524,8 @@ const DEFAULT_SETTINGS = {
   enabled: true,
   modifierKey: 'shift', // 'shift' | 'alt' | 'ctrl_cmd'
   sizePreset: 'default', // 'compact' | 'default' | 'large'
-  growAnimation: true
+  growAnimation: true,
+  theme: 'dark' // 'dark' | 'light'
 };
 
 // Singleton active settings instance
@@ -530,6 +577,18 @@ function parseUrlDetails(rawUrl, baseURI) {
  * @param {string} key
  * @returns {'shift'|'alt'|'ctrl_cmd'}
  */
+/**
+ * Normalizes any theme representation into a standard canonical theme: 'dark' | 'light'.
+ * Returns 'light' if the string contains 'light' or 'white', else 'dark'.
+ * @param {string} theme
+ * @returns {'dark'|'light'}
+ */
+function normalizeTheme(theme) {
+  if (typeof theme !== 'string') return 'dark';
+  const clean = theme.trim().toLowerCase();
+  return (clean.includes('light') || clean.includes('white')) ? 'light' : 'dark';
+}
+
 function normalizeModifierKey(key) {
   if (typeof key !== 'string') return 'shift';
   const clean = key.trim().toLowerCase().replace(/[^a-z]/g, '');
@@ -1175,10 +1234,12 @@ function mountModal(arg0, arg1, arg2) {
   if (!urlDetails) return null;
 
   const sizePreset = options.sizePreset || activeSettings.sizePreset || activeSettings.modalSize || 'default';
+  const currentTheme = normalizeTheme(options.theme || activeSettings.theme || 'dark');
 
   // Step 1: Create host element and apply critical inline reset styles
   const hostElement = doc.createElement('peek-wave-container');
   hostElement.id = 'peek-wave-host';
+  hostElement.setAttribute('data-theme', currentTheme);
   hostElement.style.cssText = [
     'all: initial !important;',
     'display: block !important;',
@@ -1206,6 +1267,7 @@ function mountModal(arg0, arg1, arg2) {
   // Step 5: Create Modal Window with configured size preset
   const modalWin = doc.createElement('div');
   modalWin.className = `peek-wave-modal peek-size-${sizePreset}`;
+  modalWin.setAttribute('data-theme', currentTheme);
 
   // Apply smooth grow animation from link coordinates if enabled
   const shouldGrow = Boolean((options.growAnimation !== undefined ? options.growAnimation : (activeSettings.growAnimation !== false)) && options.linkRect);
@@ -1508,6 +1570,7 @@ function mountModal(arg0, arg1, arg2) {
     hostElement,
     shadowRoot,
     modal: modalWin,
+    theme: currentTheme,
     backdrop,
     iframe,
     favicon,
@@ -1638,9 +1701,32 @@ function handleCaptureClick(e, win) {
   mountModal(urlDetails.fullUrl, {
     win: targetWin,
     sizePreset: activeSettings.sizePreset || activeSettings.modalSize,
+    theme: activeSettings.theme,
     linkRect: linkRect,
     growAnimation: activeSettings.growAnimation !== false
   });
+}
+
+/**
+ * Updates active settings and synchronizes any currently open preview modal live.
+ * @param {object} s
+ */
+function applySettingsUpdate(s) {
+  if (!s || typeof s !== 'object') return;
+  activeSettings = { ...activeSettings, ...s };
+  if (s.theme !== undefined) {
+    const normalized = normalizeTheme(s.theme);
+    activeSettings.theme = normalized;
+    if (currentModal) {
+      if (currentModal.hostElement) {
+        currentModal.hostElement.setAttribute('data-theme', normalized);
+      }
+      if (currentModal.modal) {
+        currentModal.modal.setAttribute('data-theme', normalized);
+      }
+      currentModal.theme = normalized;
+    }
+  }
 }
 
 /**
@@ -1658,7 +1744,7 @@ function initContentScript(win, chromeObj) {
       getModal: () => currentModal,
       teardown: () => teardownModal(null),
       getSettings: () => ({ ...activeSettings }),
-      setSettings: (s) => { activeSettings = { ...activeSettings, ...s }; }
+      setSettings: applySettingsUpdate
     };
   }
 
@@ -1668,7 +1754,7 @@ function initContentScript(win, chromeObj) {
       getModal: () => currentModal,
       teardown: () => teardownModal(targetWin),
       getSettings: () => ({ ...activeSettings }),
-      setSettings: (s) => { activeSettings = { ...activeSettings, ...s }; }
+      setSettings: applySettingsUpdate
     };
   }
   targetWin.__PEEK_WAVE_INITIALIZED__ = true;
@@ -1680,14 +1766,17 @@ function initContentScript(win, chromeObj) {
   // Load storage settings
   const storageArea = targetChrome?.storage?.sync || targetChrome?.storage?.local;
   if (storageArea) {
-    storageArea.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation'], (items) => {
+    storageArea.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme'], (items) => {
       if (targetChrome?.runtime?.lastError) {
         if (targetChrome?.storage?.local && storageArea !== targetChrome.storage.local) {
-          targetChrome.storage.local.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation'], (localItems) => {
+          targetChrome.storage.local.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme'], (localItems) => {
             if (localItems) {
               activeSettings = { ...activeSettings, ...localItems };
               if (localItems.modalSize && !localItems.sizePreset) {
                 activeSettings.sizePreset = localItems.modalSize;
+              }
+              if (localItems.theme !== undefined) {
+                activeSettings.theme = normalizeTheme(localItems.theme);
               }
             }
           });
@@ -1698,6 +1787,9 @@ function initContentScript(win, chromeObj) {
         activeSettings = { ...activeSettings, ...items };
         if (items.modalSize && !items.sizePreset) {
           activeSettings.sizePreset = items.modalSize;
+        }
+        if (items.theme !== undefined) {
+          activeSettings.theme = normalizeTheme(items.theme);
         }
       }
     });
@@ -1714,6 +1806,19 @@ function initContentScript(win, chromeObj) {
           }
           if (k === 'sizePreset' && !changes.modalSize) {
             activeSettings.modalSize = change.newValue;
+          }
+          if (k === 'theme') {
+            const normalized = normalizeTheme(change.newValue);
+            activeSettings.theme = normalized;
+            if (currentModal) {
+              if (currentModal.hostElement) {
+                currentModal.hostElement.setAttribute('data-theme', normalized);
+              }
+              if (currentModal.modal) {
+                currentModal.modal.setAttribute('data-theme', normalized);
+              }
+              currentModal.theme = normalized;
+            }
           }
         }
       }
@@ -1738,6 +1843,19 @@ function initContentScript(win, chromeObj) {
           activeSettings.modalSize = sz;
           activeSettings.sizePreset = sz;
         }
+        if (message.settings.theme !== undefined) {
+          const normalized = normalizeTheme(message.settings.theme);
+          activeSettings.theme = normalized;
+          if (currentModal) {
+            if (currentModal.hostElement) {
+              currentModal.hostElement.setAttribute('data-theme', normalized);
+            }
+            if (currentModal.modal) {
+              currentModal.modal.setAttribute('data-theme', normalized);
+            }
+            currentModal.theme = normalized;
+          }
+        }
       }
     });
   }
@@ -1747,7 +1865,7 @@ function initContentScript(win, chromeObj) {
   targetWin.addEventListener('click', clickHandler, { capture: true });
 
   // Public testing & inspection hooks
-  targetWin.__PEEK_WAVE_MOUNT__ = (url, size, opts = {}) => mountModal(url, { win: targetWin, sizePreset: size, ...opts });
+  targetWin.__PEEK_WAVE_MOUNT__ = (url, size, opts = {}) => mountModal(url, { win: targetWin, sizePreset: size, theme: activeSettings.theme, ...opts });
   targetWin.__PEEK_WAVE_TEARDOWN__ = () => teardownModal(targetWin);
   targetWin.__PEEK_WAVE_GET_MODAL__ = () => currentModal;
   targetWin.__PEEK_WAVE_GET_SETTINGS__ = () => ({ ...activeSettings });
@@ -1756,7 +1874,7 @@ function initContentScript(win, chromeObj) {
     getModal: () => currentModal,
     teardown: () => teardownModal(targetWin),
     getSettings: () => ({ ...activeSettings }),
-    setSettings: (s) => { activeSettings = { ...activeSettings, ...s }; }
+    setSettings: applySettingsUpdate
   };
 }
 
@@ -1774,6 +1892,7 @@ if (typeof module !== 'undefined' && module.exports) {
     XLINK_NS,
     createSvgElement,
     normalizeModifierKey,
+    normalizeTheme,
     getAnchorRawHref,
     parseUrlDetails,
     isModifierActive,
@@ -1790,6 +1909,6 @@ if (typeof module !== 'undefined' && module.exports) {
     initContentScript,
     getModal: () => currentModal,
     getSettings: () => ({ ...activeSettings }),
-    setSettings: (s) => { activeSettings = { ...activeSettings, ...s }; }
+    setSettings: applySettingsUpdate
   };
 }

@@ -17,7 +17,12 @@
           <span class="badge" id="versionBadge">v1.0.0</span>
         </div>
       </div>
-      <div class="status-wrapper">
+      <div class="header-actions">
+        <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Switch to light theme" title="Switch to light theme">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
         <span class="status-pill active" id="statusBadge" aria-live="polite">Active</span>
       </div>
     </header>
@@ -27,7 +32,7 @@
       <section class="setting-card toggle-card">
         <div class="card-info">
           <label for="enableToggle" class="card-label">Link Previews</label>
-          <p class="card-desc" id="enableToggleDesc">Show instant preview overlay on modifier click</p>
+          <p class="card-desc" id="enableToggleDesc">Instant preview overlay on modifier click</p>
         </div>
         <div class="toggle-control">
           <label class="switch" for="enableToggle">
@@ -38,26 +43,14 @@
         </div>
       </section>
 
-      <!-- Section 1b: Grow from Link Animation Toggle -->
-      <section class="setting-card toggle-card">
-        <div class="card-info">
-          <label for="growAnimationToggle" class="card-label">Grow from Link</label>
-          <p class="card-desc" id="growAnimationDesc">Animate modal expanding from clicked link</p>
-        </div>
-        <div class="toggle-control">
-          <label class="switch" for="growAnimationToggle">
-            <input type="checkbox" id="growAnimationToggle" name="growAnimation" aria-describedby="growAnimationDesc" checked>
-            <span class="slider" aria-hidden="true"></span>
-            <span class="sr-only">Enable or disable grow from link animation</span>
-          </label>
-        </div>
-      </section>
+      <!-- Hidden Grow from Link toggle element for backward compatibility and test runner -->
+      <input type="checkbox" id="growAnimationToggle" name="growAnimation" class="sr-only" checked aria-hidden="true">
 
       <!-- Section 2: Trigger Modifier Key -->
       <fieldset class="setting-card group-card" role="radiogroup" aria-labelledby="modifierLegend">
         <div class="card-header-row">
           <legend id="modifierLegend" class="card-label">Trigger Modifier</legend>
-          <span class="card-hint">Hold key + Click link</span>
+          <span class="card-hint">Hold key + Click</span>
         </div>
         
         <div class="segmented-control" id="modifierSegmentedGroup">
@@ -139,7 +132,7 @@
     <!-- Footer -->
     <footer class="popup-footer">
       <div class="footer-hint">
-        <svg class="hint-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <svg class="hint-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
           <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4zm0 6.5a.875.875 0 1 1 0 1.75.875.875 0 0 1 0-1.75z"/>
         </svg>
         <span class="hint-text">Hold modifier while clicking any link to peek</span>

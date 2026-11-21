@@ -5,7 +5,8 @@
 /* --------------------------------------------------------------------------
    1. Root Host & Universal Reset
    -------------------------------------------------------------------------- */
-:host {
+:host,
+:host([data-theme="dark"]) {
   all: initial !important;
   display: block !important;
   position: fixed !important;
@@ -15,16 +16,16 @@
   z-index: 2147483647 !important;
   pointer-events: auto !important;
 
-  /* Theme Tokens - Dark Mode (Default) */
+  /* Theme Tokens - Dark Mode (Default) - Pure Black Aesthetic */
   --peek-accent: #38bdf8;
-  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(15, 23, 42, 0.50) 100%), rgba(15, 23, 42, 0.50);
-  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(30, 41, 59, 0.45) 100%), rgba(30, 41, 59, 0.45);
+  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(5, 5, 5, 0.90) 100%), #000000;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(5, 5, 5, 0.85) 100%), #050505;
   --peek-header-border: rgba(255, 255, 255, 0.14);
   --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
   --peek-border-glass: rgba(255, 255, 255, 0.18);
-  --peek-text-primary: #f8fafc;
+  --peek-text-primary: #ffffff;
   --peek-text-muted: #94a3b8;
-  --peek-shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.45), 0 8px 20px rgba(0, 0, 0, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+  --peek-shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.70), 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
   --peek-backdrop-bg: rgba(0, 0, 0, 0.40);
   --peek-btn-hover: rgba(255, 255, 255, 0.10);
   --peek-btn-close-hover: rgba(239, 68, 68, 0.20);
@@ -33,10 +34,55 @@
   --peek-domain-active: rgba(255, 255, 255, 0.16);
   --peek-domain-border: rgba(255, 255, 255, 0.16);
   --peek-spinner-border: rgba(255, 255, 255, 0.18);
-  --peek-tooltip-bg: #1e293b;
+  --peek-tooltip-bg: #000000;
   --peek-tooltip-border: rgba(255, 255, 255, 0.16);
-  --peek-tooltip-text: #f8fafc;
-  --peek-iframe-bg: #0f172a;
+  --peek-tooltip-text: #ffffff;
+  --peek-iframe-bg: #000000;
+}
+
+:host([data-theme="light"]) {
+  /* Theme Tokens - Light Mode - Pure White Aesthetic */
+  --peek-backdrop-bg: rgba(0, 0, 0, 0.25);
+  --peek-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 50%, rgba(245, 245, 245, 0.95) 100%), #ffffff;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.92) 100%), #ffffff;
+  --peek-header-border: rgba(0, 0, 0, 0.10);
+  --peek-header-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  --peek-border-glass: rgba(0, 0, 0, 0.15);
+  --peek-text-primary: #000000;
+  --peek-text-muted: #52525b;
+  --peek-shadow-glass: 0 20px 45px rgba(0, 0, 0, 0.12), 0 6px 15px rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  --peek-btn-hover: rgba(0, 0, 0, 0.06);
+  --peek-btn-close-hover: rgba(239, 68, 68, 0.12);
+  --peek-btn-close-color: #dc2626;
+  --peek-domain-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-active: rgba(0, 0, 0, 0.12);
+  --peek-domain-border: rgba(0, 0, 0, 0.12);
+  --peek-spinner-border: rgba(0, 0, 0, 0.15);
+  --peek-tooltip-bg: #ffffff;
+  --peek-tooltip-border: rgba(0, 0, 0, 0.15);
+  --peek-tooltip-text: #000000;
+  --peek-iframe-bg: #ffffff;
+}
+
+.peek-wave-modal[data-theme="dark"] {
+  background: var(--peek-glass-bg, #000000) !important;
+  border-color: var(--peek-border-glass, rgba(255, 255, 255, 0.18)) !important;
+}
+
+.peek-wave-modal[data-theme="light"] {
+  background: var(--peek-glass-bg, #ffffff) !important;
+  border-color: var(--peek-border-glass, rgba(0, 0, 0, 0.15)) !important;
+  --peek-text-primary: #000000;
+  --peek-text-muted: #52525b;
+  --peek-iframe-bg: #ffffff;
+  --peek-header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.92) 100%), #ffffff;
+  --peek-header-border: rgba(0, 0, 0, 0.10);
+  --peek-border-glass: rgba(0, 0, 0, 0.15);
+  --peek-btn-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-hover: rgba(0, 0, 0, 0.06);
+  --peek-domain-border: rgba(0, 0, 0, 0.12);
+  --peek-tooltip-bg: #ffffff;
+  --peek-tooltip-text: #000000;
 }
 
 @supports (color: AccentColor) {
@@ -358,7 +404,7 @@
   width: 100% !important;
   height: calc(100% - 44px) !important;
   position: relative !important;
-  background: var(--peek-iframe-bg, #0f172a) !important;
+  background: var(--peek-iframe-bg, #000000) !important;
   overflow: hidden !important;
   contain: strict !important;
   isolation: isolate !important;
