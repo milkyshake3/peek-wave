@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Peek Wave Settings</title>
   <link rel="stylesheet" href="popup.css">
+  <script src="theme-init.js"></script>
 </head>
 <body>
   <div class="popup-container">
@@ -18,9 +19,25 @@
         </div>
       </div>
       <div class="header-actions">
-        <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Switch to light theme" title="Switch to light theme">
-          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <button type="button" id="themeToggleBtn" class="theme-toggle-btn" data-theme="dark" aria-label="Theme: Dark — Switch to Light" title="Theme: Dark — Switch to Light">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon theme-icon-auto" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
         </button>
         <span class="status-pill active" id="statusBadge" aria-live="polite">Active</span>
@@ -41,13 +58,26 @@
             <span class="sr-only">Enable or disable Peek Wave link previews</span>
           </label>
         </div>
+        <input type="checkbox" id="growAnimationToggle" name="growAnimation" class="sr-only" tabindex="-1" aria-hidden="true" checked>
       </section>
 
-      <!-- Hidden Grow from Link toggle element for backward compatibility and test runner -->
-      <input type="checkbox" id="growAnimationToggle" name="growAnimation" class="sr-only" checked aria-hidden="true">
+      <!-- Section 2: Per-Site Pause Control -->
+      <section class="setting-card site-card" id="siteCard">
+        <div class="site-row" id="currentSiteRow">
+          <div class="site-info">
+            <span class="site-kicker">This Site</span>
+            <span class="site-host" id="currentSiteHost">Current tab</span>
+          </div>
+          <button type="button" id="siteToggleBtn" class="site-toggle-btn" aria-pressed="false" disabled>Pause</button>
+        </div>
+        <div class="paused-sites-section hidden" id="pausedSitesSection">
+          <span class="paused-sites-label">Paused sites</span>
+          <div class="paused-sites-list" id="pausedSitesList"></div>
+        </div>
+      </section>
 
-      <!-- Section 2: Trigger Modifier Key -->
-      <fieldset class="setting-card group-card" role="radiogroup" aria-labelledby="modifierLegend">
+      <!-- Section 3: Trigger Modifier Key -->
+      <fieldset class="setting-card group-card" id="modifierFieldset" role="radiogroup" aria-labelledby="modifierLegend">
         <div class="card-header-row">
           <legend id="modifierLegend" class="card-label">Trigger Modifier</legend>
           <span class="card-hint">Hold key + Click</span>
@@ -65,7 +95,7 @@
           <label class="segment-option" for="mod-alt">
             <input type="radio" id="mod-alt" name="modifierKey" value="alt">
             <span class="segment-pill">
-              <span class="pill-key">Alt <span class="alt-key">(⌥)</span></span>
+              <span class="pill-key" id="altKeyLabel">Alt <span class="alt-key">(⌥)</span></span>
               <span class="pill-action">+ Click</span>
             </span>
           </label>
@@ -73,7 +103,7 @@
           <label class="segment-option" for="mod-ctrl">
             <input type="radio" id="mod-ctrl" name="modifierKey" value="ctrl_cmd">
             <span class="segment-pill">
-              <span class="pill-key">Ctrl <span class="alt-key">(⌘)</span></span>
+              <span class="pill-key" id="ctrlKeyLabel">Ctrl <span class="alt-key">(⌘)</span></span>
               <span class="pill-action">+ Click</span>
             </span>
           </label>
@@ -87,8 +117,8 @@
         </select>
       </fieldset>
 
-      <!-- Section 3: Modal Size Dimensions -->
-      <fieldset class="setting-card group-card" role="radiogroup" aria-labelledby="sizeLegend">
+      <!-- Section 4: Modal Size Dimensions -->
+      <fieldset class="setting-card group-card" id="sizeFieldset" role="radiogroup" aria-labelledby="sizeLegend">
         <div class="card-header-row">
           <legend id="sizeLegend" class="card-label">Modal Dimensions</legend>
           <span class="card-hint" id="sizePresetHint">Default: 860×600</span>
@@ -135,7 +165,7 @@
         <svg class="hint-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
           <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4zm0 6.5a.875.875 0 1 1 0 1.75.875.875 0 0 1 0-1.75z"/>
         </svg>
-        <span class="hint-text">Hold modifier while clicking any link to peek</span>
+        <span class="hint-text" id="footerHintText">Hold Shift + click any link to peek</span>
       </div>
 
       <div class="footer-actions">

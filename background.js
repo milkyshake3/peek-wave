@@ -18,8 +18,71 @@ const DEFAULT_SETTINGS = {
   modalSize: 'default',
   sizePreset: 'default',
   growAnimation: true,
-  theme: 'dark'
+  theme: 'dark',
+  disabledSites: []
 };
+
+/**
+ * Normalizes theme string to 'dark' | 'light' | 'auto'.
+ * @param {string} theme
+ * @returns {'dark'|'light'|'auto'}
+ */
+function normalizeTheme(theme) {
+  if (typeof theme !== 'string') return 'dark';
+  const clean = theme.trim().toLowerCase();
+  if (clean.includes('auto') || clean.includes('system')) return 'auto';
+  if (clean.includes('light') || clean.includes('white')) return 'light';
+  return 'dark';
+}
+
+/**
+ * Normalizes a URL or hostname into a canonical lowercase hostname without leading 'www.'.
+ * Rejects non-http(s) URLs, whitespace, or paths.
+ * @param {string} input
+ * @returns {string}
+ */
+function normalizeHostname(input) {
+  if (typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+
+  let host = '';
+  if (trimmed.includes('://')) {
+    try {
+      const parsed = new URL(trimmed);
+      const proto = parsed.protocol.toLowerCase();
+      if (proto !== 'http:' && proto !== 'https:') return '';
+      host = parsed.hostname;
+    } catch {
+      return '';
+    }
+  } else {
+    if (/\s|\/|:/.test(trimmed)) return '';
+    host = trimmed;
+  }
+
+  const cleanHost = host.toLowerCase().replace(/^www\./, '').replace(/\.+$/, '');
+  if (!cleanHost || !/^[a-z0-9.-]+$/.test(cleanHost)) return '';
+  return cleanHost;
+}
+
+/**
+ * Normalizes an array of disabled site hostnames/URLs (deduplicated, capped at 200).
+ * @param {Array<string>} sites
+ * @returns {string[]}
+ */
+function normalizeDisabledSites(sites) {
+  if (!Array.isArray(sites)) return [];
+  const seen = new Set();
+  for (const entry of sites) {
+    const host = normalizeHostname(entry);
+    if (host) {
+      seen.add(host);
+      if (seen.size >= 200) break;
+    }
+  }
+  return Array.from(seen);
+}
 
 /**
  * Resolves the primary storage area (chrome.storage.sync with fallback to chrome.storage.local).
@@ -458,15 +521,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
 
     // Handle GET_SETTINGS request
     if (action === 'GET_SETTINGS' || action === 'getSettings') {
-      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation', 'theme'])
+      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation', 'theme', 'disabledSites'])
         .then((settings) => {
           const resolvedSettings = {
             theme: DEFAULT_SETTINGS.theme,
+            disabledSites: [],
             ...settings
           };
-          if (!resolvedSettings.theme) {
-            resolvedSettings.theme = DEFAULT_SETTINGS.theme;
-          }
+          resolvedSettings.theme = normalizeTheme(resolvedSettings.theme || DEFAULT_SETTINGS.theme);
+          resolvedSettings.disabledSites = normalizeDisabledSites(resolvedSettings.disabledSites);
           sendResponse({ success: true, settings: resolvedSettings });
         })
         .catch((err) => {
@@ -525,6 +588,9 @@ if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     DEFAULT_SETTINGS,
+    normalizeTheme,
+    normalizeHostname,
+    normalizeDisabledSites,
     getStorageArea,
     readStorage,
     writeStorage,

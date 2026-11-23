@@ -3,11 +3,11 @@
  * 
  * Responsibilities:
  * 1. Reads current preferences on startup and populates UI inputs.
- * 2. Manages theme toggle between pure black ('dark') and pure white ('light') aesthetics.
- * 3. Bidirectionally synchronizes modern radio pills and accessible select controls.
- * 4. Binds immediate change listeners to toggle, modifier dropdown, and size preset.
+ * 2. Manages 3-way monochrome theme cycling ('dark' -> 'light' -> 'auto') without FOUC or innerHTML.
+ * 3. Manages per-site pause toggling and paused-sites chip removal.
+ * 4. Bidirectionally synchronizes modern radio pills and accessible select controls.
  * 5. Persists updates to chrome.storage.sync with local fallback via PeekWaveStorage.
- * 6. Updates visual badge, size hints, theme icons, and UI status dynamically.
+ * 6. Updates visual badge, manifest version, OS modifier labels, dynamic footer hint, and size hints.
  * 7. Provides initPopup() export matching E2E test harness expectations.
  */
 
@@ -23,7 +23,8 @@ const FallbackStorage = {
     modalSize: 'default',
     sizePreset: 'default',
     growAnimation: true,
-    theme: 'dark'
+    theme: 'dark',
+    disabledSites: []
   },
   normalizeModifierKey(key) {
     if (typeof key !== 'string') return 'shift';
@@ -41,22 +42,53 @@ const FallbackStorage = {
   normalizeTheme(theme) {
     if (typeof theme !== 'string') return 'dark';
     const clean = theme.trim().toLowerCase();
+    if (clean.includes('auto') || clean.includes('system')) return 'auto';
     if (clean.includes('light') || clean.includes('white')) return 'light';
     return 'dark';
+  },
+  normalizeHostname(input) {
+    if (typeof input !== 'string') return '';
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+    let host = '';
+    if (trimmed.includes('://')) {
+      try {
+        const parsed = new URL(trimmed);
+        const proto = parsed.protocol.toLowerCase();
+        if (proto !== 'http:' && proto !== 'https:') return '';
+        host = parsed.hostname;
+      } catch {
+        return '';
+      }
+    } else {
+      if (/\s|\/|:/.test(trimmed)) return '';
+      host = trimmed;
+    }
+    const cleanHost = host.toLowerCase().replace(/^www\./, '').replace(/\.+$/, '');
+    if (!cleanHost || !/^[a-z0-9.-]+$/.test(cleanHost)) return '';
+    return cleanHost;
+  },
+  normalizeDisabledSites(sites) {
+    if (!Array.isArray(sites)) return [];
+    const seen = new Set();
+    for (const entry of sites) {
+      const host = this.normalizeHostname(entry);
+      if (host) {
+        seen.add(host);
+        if (seen.size >= 200) break;
+      }
+    }
+    return Array.from(seen);
   }
 };
 
-/**
- * SVGs for theme toggle button (moon for dark mode, sun for light mode).
- */
-const MOON_ICON_SVG = '<svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
-const SUN_ICON_SVG = '<svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+const THEME_CYCLE_ORDER = ['dark', 'light', 'auto'];
 
 /**
  * Initializes the popup controller inside a browser or simulated DOM window.
  * @param {Window} [win] 
  * @param {object} [chromeObj] 
- * @returns {object} Controller instance with element handles, theme methods, and saveSettings()
+ * @returns {object} Controller instance with element handles, theme/site methods, and saveSettings()
  */
 function initPopup(win, chromeObj) {
   const targetWin = win || (typeof window !== 'undefined' ? window : globalThis);
@@ -98,6 +130,30 @@ function initPopup(win, chromeObj) {
     }
     return FallbackStorage.normalizeTheme(theme);
   }
+
+  function resolveNormalizeHostname(input) {
+    if (Storage && typeof Storage.normalizeHostname === 'function') {
+      return Storage.normalizeHostname(input);
+    }
+    return FallbackStorage.normalizeHostname(input);
+  }
+
+  function resolveNormalizeDisabledSites(sites) {
+    if (Storage && typeof Storage.normalizeDisabledSites === 'function') {
+      return Storage.normalizeDisabledSites(sites);
+    }
+    return FallbackStorage.normalizeDisabledSites(sites);
+  }
+
+  function detectIsMac() {
+    const plat = targetWin?.navigator?.userAgentData?.platform ||
+                 targetWin?.navigator?.platform ||
+                 targetWin?.navigator?.userAgent ||
+                 '';
+    return /mac/i.test(String(plat));
+  }
+
+  const isMac = detectIsMac();
 
   // Resolve DOM elements with dual-ID support for production UI and test fixtures
   let toggleEl = targetDoc.getElementById('enableToggle') ||
@@ -184,11 +240,39 @@ function initPopup(win, chromeObj) {
   }
 
   // Query UI elements
+  const versionBadge = targetDoc.getElementById('versionBadge');
   const statusBadge = targetDoc.getElementById('statusBadge') || targetDoc.getElementById('status-badge') || targetDoc.querySelector('.status-pill');
   const sizeHint = targetDoc.getElementById('sizePresetHint');
   const saveNotice = targetDoc.getElementById('saveStatus') || targetDoc.getElementById('save-indicator') || targetDoc.querySelector('.save-status');
   const resetDefaultsBtn = targetDoc.getElementById('resetDefaultsBtn');
   const openShortcutsBtn = targetDoc.getElementById('openShortcutsBtn');
+  const modifierFieldset = targetDoc.getElementById('modifierFieldset');
+  const sizeFieldset = targetDoc.getElementById('sizeFieldset');
+  const footerHintText = targetDoc.getElementById('footerHintText');
+  const altKeyLabel = targetDoc.getElementById('altKeyLabel');
+  const ctrlKeyLabel = targetDoc.getElementById('ctrlKeyLabel');
+  const currentSiteHostEl = targetDoc.getElementById('currentSiteHost');
+  const siteToggleBtn = targetDoc.getElementById('siteToggleBtn');
+  const pausedSitesSection = targetDoc.getElementById('pausedSitesSection');
+  const pausedSitesList = targetDoc.getElementById('pausedSitesList');
+
+  // Populate dynamic manifest version badge
+  if (versionBadge && targetChrome?.runtime && typeof targetChrome.runtime.getManifest === 'function') {
+    try {
+      const manifest = targetChrome.runtime.getManifest();
+      if (manifest && manifest.version) {
+        versionBadge.textContent = `v${manifest.version}`;
+      }
+    } catch {}
+  }
+
+  // Adapt OS-specific key labels
+  if (altKeyLabel) {
+    altKeyLabel.textContent = isMac ? 'Option (⌥)' : 'Alt (⌥)';
+  }
+  if (ctrlKeyLabel) {
+    ctrlKeyLabel.textContent = isMac ? 'Cmd (⌘)' : 'Ctrl (⌘)';
+  }
 
   // Query radio groups with resilience for both standard Chromium and simulated DOMs
   function getModifierRadios() {
@@ -202,9 +286,17 @@ function initPopup(win, chromeObj) {
   }
 
   /**
-   * Theme management state & applicator
+   * Theme management state & applicator (zero innerHTML, 3-way: dark | light | auto)
    */
   let currentTheme = 'dark';
+  let disabledSites = [];
+  let currentSiteHost = '';
+
+  function getThemeLabel(theme) {
+    if (theme === 'light') return 'Theme: Light — Switch to Auto';
+    if (theme === 'auto') return 'Theme: Auto — Switch to Dark';
+    return 'Theme: Dark — Switch to Light';
+  }
 
   function applyTheme(theme) {
     const cleanTheme = resolveNormalizeTheme(theme);
@@ -217,20 +309,41 @@ function initPopup(win, chromeObj) {
     }
     if (themeToggleBtn) {
       themeToggleBtn.setAttribute('data-theme', cleanTheme);
-      if (cleanTheme === 'light') {
-        themeToggleBtn.setAttribute('aria-label', 'Switch to dark theme');
-        themeToggleBtn.setAttribute('title', 'Switch to dark theme');
-        themeToggleBtn.innerHTML = SUN_ICON_SVG;
-      } else {
-        themeToggleBtn.setAttribute('aria-label', 'Switch to light theme');
-        themeToggleBtn.setAttribute('title', 'Switch to light theme');
-        themeToggleBtn.innerHTML = MOON_ICON_SVG;
-      }
+      const label = getThemeLabel(cleanTheme);
+      themeToggleBtn.setAttribute('aria-label', label);
+      themeToggleBtn.setAttribute('title', label);
     }
+    try {
+      if (targetWin?.localStorage && typeof targetWin.localStorage.setItem === 'function') {
+        targetWin.localStorage.setItem('peekWaveTheme', cleanTheme);
+      }
+    } catch {}
   }
 
-  // Apply initial default theme synchronously
-  applyTheme('dark');
+  // Read pre-painted cached theme if available, else default to dark synchronously
+  let initialTheme = 'dark';
+  try {
+    const prePainted = targetDoc.documentElement?.getAttribute?.('data-theme');
+    if (prePainted) {
+      initialTheme = resolveNormalizeTheme(prePainted);
+    } else if (targetWin?.localStorage && typeof targetWin.localStorage.getItem === 'function') {
+      const cached = targetWin.localStorage.getItem('peekWaveTheme');
+      if (cached) initialTheme = resolveNormalizeTheme(cached);
+    }
+  } catch {}
+  applyTheme(initialTheme);
+
+  // Enable smooth transitions only after first paint so popup opening never flashes
+  const markThemeReady = () => {
+    if (targetDoc.documentElement?.classList) {
+      targetDoc.documentElement.classList.add('theme-ready');
+    }
+  };
+  if (typeof targetWin.requestAnimationFrame === 'function') {
+    targetWin.requestAnimationFrame(markThemeReady);
+  } else if (typeof targetWin.setTimeout === 'function') {
+    targetWin.setTimeout(markThemeReady, 0);
+  }
 
   /**
    * Synchronously sets default values so immediate microtask assertions in tests pass.
@@ -266,6 +379,21 @@ function initPopup(win, chromeObj) {
   }
 
   /**
+   * Updates footer hint text dynamically based on active modifier and OS.
+   */
+  function updateFooterHint(modVal) {
+    if (!footerHintText) return;
+    const cleanMod = resolveNormalizeModifier(modVal);
+    let keyName = 'Shift';
+    if (cleanMod === 'alt') {
+      keyName = isMac ? 'Option (⌥)' : 'Alt';
+    } else if (cleanMod === 'ctrl_cmd') {
+      keyName = isMac ? 'Cmd (⌘)' : 'Ctrl';
+    }
+    footerHintText.textContent = `Hold ${keyName} + click any link to peek`;
+  }
+
+  /**
    * Updates visual indicators based on active enabled state.
    */
   function updateVisualState(isEnabled) {
@@ -276,6 +404,12 @@ function initPopup(win, chromeObj) {
     }
     if (targetDoc.body) {
       targetDoc.body.classList.toggle('extension-disabled', !isEnabled);
+    }
+    if (modifierFieldset) {
+      modifierFieldset.disabled = !isEnabled;
+    }
+    if (sizeFieldset) {
+      sizeFieldset.disabled = !isEnabled;
     }
   }
 
@@ -295,6 +429,101 @@ function initPopup(win, chromeObj) {
   }
 
   /**
+   * Renders the current site pause button and removable paused-sites chips (zero innerHTML).
+   */
+  function renderSiteControls() {
+    const isPaused = Boolean(currentSiteHost && disabledSites.includes(currentSiteHost));
+
+    if (currentSiteHostEl) {
+      currentSiteHostEl.textContent = currentSiteHost || 'Unavailable on this page';
+    }
+
+    if (siteToggleBtn) {
+      siteToggleBtn.disabled = !currentSiteHost;
+      siteToggleBtn.textContent = isPaused ? 'Paused' : 'Pause';
+      siteToggleBtn.classList.toggle('is-paused', isPaused);
+      siteToggleBtn.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+      siteToggleBtn.title = currentSiteHost
+        ? (isPaused ? `Resume Peek Wave on ${currentSiteHost}` : `Pause Peek Wave on ${currentSiteHost}`)
+        : 'Cannot pause internal browser pages';
+    }
+
+    if (pausedSitesSection && pausedSitesList) {
+      while (pausedSitesList.firstChild) {
+        pausedSitesList.removeChild(pausedSitesList.firstChild);
+      }
+
+      if (disabledSites.length === 0) {
+        pausedSitesSection.classList.add('hidden');
+      } else {
+        pausedSitesSection.classList.remove('hidden');
+        for (const host of disabledSites) {
+          const chip = targetDoc.createElement('span');
+          chip.className = 'paused-site-chip';
+
+          const hostSpan = targetDoc.createElement('span');
+          hostSpan.className = 'chip-host';
+          hostSpan.textContent = host;
+
+          const removeBtn = targetDoc.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'chip-remove';
+          removeBtn.setAttribute('aria-label', `Resume ${host}`);
+          removeBtn.title = `Resume ${host}`;
+          removeBtn.textContent = '×';
+          removeBtn.addEventListener('click', () => {
+            disabledSites = disabledSites.filter((s) => s !== host);
+            renderSiteControls();
+            saveSettings();
+          });
+
+          chip.appendChild(hostSpan);
+          chip.appendChild(removeBtn);
+          pausedSitesList.appendChild(chip);
+        }
+      }
+    }
+  }
+
+  function resolveActiveTabHost() {
+    if (!targetChrome?.tabs || typeof targetChrome.tabs.query !== 'function') {
+      renderSiteControls();
+      return;
+    }
+    try {
+      targetChrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (targetChrome.runtime?.lastError || !Array.isArray(tabs) || tabs.length === 0) {
+          currentSiteHost = '';
+          renderSiteControls();
+          return;
+        }
+        const activeTab = tabs[0];
+        currentSiteHost = resolveNormalizeHostname(activeTab?.url || '');
+        renderSiteControls();
+      });
+    } catch {
+      currentSiteHost = '';
+      renderSiteControls();
+    }
+  }
+
+  /**
+   * Toggles pause state for the active site (or a supplied host/URL) and persists.
+   * @param {string} [hostOverride]
+   */
+  function toggleSitePause(hostOverride) {
+    const host = resolveNormalizeHostname(hostOverride || currentSiteHost);
+    if (!host) return Promise.resolve(null);
+    if (disabledSites.includes(host)) {
+      disabledSites = disabledSites.filter((s) => s !== host);
+    } else {
+      disabledSites = resolveNormalizeDisabledSites([...disabledSites, host]);
+    }
+    renderSiteControls();
+    return saveSettings();
+  }
+
+  /**
    * Shows a brief save confirmation flash without inducing layout shift.
    */
   function showSaveIndicator() {
@@ -308,7 +537,7 @@ function initPopup(win, chromeObj) {
   }
 
   /**
-   * Synchronizes modifier radio pills with select element.
+   * Synchronizes modifier radio pills with select element and footer hint.
    */
   function syncModifierRadios(val) {
     const cleanVal = resolveNormalizeModifier(val);
@@ -319,6 +548,7 @@ function initPopup(win, chromeObj) {
     if (modifierSelect && modifierSelect.value !== cleanVal) {
       modifierSelect.value = cleanVal;
     }
+    updateFooterHint(cleanVal);
   }
 
   /**
@@ -351,7 +581,7 @@ function initPopup(win, chromeObj) {
       const area = targetChrome.storage.sync || targetChrome.storage.local;
       if (area) {
         settings = await new Promise((resolve) => {
-          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme'], (res) => {
+          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme', 'disabledSites'], (res) => {
             resolve({ ...(Storage.DEFAULT_SETTINGS || FallbackStorage.DEFAULT_SETTINGS), ...(res || {}) });
           });
         });
@@ -363,6 +593,7 @@ function initPopup(win, chromeObj) {
     const modKey = resolveNormalizeModifier(settings.modifierKey);
     const sizeVal = resolveNormalizeSize(settings.modalSize || settings.sizePreset);
     const themeVal = resolveNormalizeTheme(settings.theme || 'dark');
+    disabledSites = resolveNormalizeDisabledSites(settings.disabledSites);
 
     if (toggleEl) {
       toggleEl.checked = isEnabled;
@@ -381,6 +612,7 @@ function initPopup(win, chromeObj) {
     syncSizeRadios(sizeVal);
     applyTheme(themeVal);
     updateVisualState(isEnabled);
+    renderSiteControls();
   }
 
   /**
@@ -394,6 +626,8 @@ function initPopup(win, chromeObj) {
     const modifierVal = modifierSelect ? resolveNormalizeModifier(modifierSelect.value) : 'shift';
     const sizeVal = sizeSelect ? resolveNormalizeSize(sizeSelect.value) : 'default';
     const themeVal = resolveNormalizeTheme(currentTheme);
+    const sitesVal = resolveNormalizeDisabledSites(disabledSites);
+    disabledSites = sitesVal;
 
     const newSettings = {
       enabled: isEnabled,
@@ -401,7 +635,8 @@ function initPopup(win, chromeObj) {
       modalSize: sizeVal,
       sizePreset: sizeVal,
       growAnimation: isGrow,
-      theme: themeVal
+      theme: themeVal,
+      disabledSites: sitesVal
     };
 
     // Keep radio pills synchronized
@@ -409,6 +644,7 @@ function initPopup(win, chromeObj) {
     syncSizeRadios(sizeVal);
 
     updateVisualState(isEnabled);
+    renderSiteControls();
     showSaveIndicator();
 
     if (typeof Storage.saveSettings === 'function') {
@@ -464,12 +700,20 @@ function initPopup(win, chromeObj) {
     });
   }
 
-  // Theme toggle button click listener
+  // Theme toggle button click listener (3-way cycle: dark -> light -> auto -> dark)
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
-      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      const idx = THEME_CYCLE_ORDER.indexOf(currentTheme);
+      const nextTheme = THEME_CYCLE_ORDER[(idx + 1) % THEME_CYCLE_ORDER.length];
       applyTheme(nextTheme);
       saveSettings();
+    });
+  }
+
+  // Per-site pause button listener
+  if (siteToggleBtn) {
+    siteToggleBtn.addEventListener('click', () => {
+      toggleSitePause();
     });
   }
 
@@ -530,9 +774,11 @@ function initPopup(win, chromeObj) {
       if (growToggleEl) growToggleEl.checked = true;
       if (modifierSelect) modifierSelect.value = 'shift';
       if (sizeSelect) sizeSelect.value = 'default';
+      disabledSites = [];
       syncModifierRadios('shift');
       syncSizeRadios('default');
       applyTheme('dark');
+      renderSiteControls();
       saveSettings();
     });
   }
@@ -546,7 +792,9 @@ function initPopup(win, chromeObj) {
     });
   }
 
-  // Initial load from storage
+  // Initial load from storage & active tab query
+  updateFooterHint('shift');
+  resolveActiveTabHost();
   loadSettings();
 
   return {
@@ -555,8 +803,12 @@ function initPopup(win, chromeObj) {
     modifierSelect,
     sizeSelect,
     themeToggleBtn,
+    siteToggleBtn,
     applyTheme,
     getTheme: () => currentTheme,
+    toggleSitePause,
+    getDisabledSites: () => [...disabledSites],
+    getCurrentSiteHost: () => currentSiteHost,
     saveSettings,
     loadSettings
   };
@@ -587,7 +839,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     initPopup,
     FallbackStorage,
-    MOON_ICON_SVG,
-    SUN_ICON_SVG
+    THEME_CYCLE_ORDER
   };
 }

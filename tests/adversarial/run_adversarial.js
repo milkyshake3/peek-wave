@@ -17,6 +17,7 @@ const { runTeardownMemoryAdversarialTests } = require('./teardown_memory_adversa
 const { runM2RemediationAdversarialTests } = require('./m2_remediation_adversarial.test');
 const { runM3StoragePopupAdversarialTests } = require('./m3_storage_popup_adversarial.test');
 const { runTwitterUnforwardingAdversarialTests } = require('./twitter_unforwarding_adversarial.test');
+const { runUiFeaturesAdversarialTests } = require('./ui_features_adversarial.test');
 
 async function main() {
   console.log('\n===============================================================');
@@ -29,6 +30,7 @@ async function main() {
   let m2RemResult = { passed: 0, failed: 0 };
   let m3Result = { passed: 0, failed: 0 };
   let twitterResult = { passed: 0, failed: 0 };
+  let uiResult = { passed: 0, failed: 0 };
 
   try {
     bgResult = await runAdversarialBackgroundTests();
@@ -72,8 +74,15 @@ async function main() {
     twitterResult.failed++;
   }
 
-  const totalPassed = bgResult.passed + iconResult.totalPass + teardownResult.passed + m2RemResult.passed + m3Result.passed + twitterResult.passed;
-  const totalFailed = bgResult.failed + iconResult.totalFail + teardownResult.failed + m2RemResult.failed + m3Result.failed + twitterResult.failed;
+  try {
+    uiResult = await runUiFeaturesAdversarialTests();
+  } catch (err) {
+    console.error('Fatal error during UI features adversarial suite:', err);
+    uiResult.failed++;
+  }
+
+  const totalPassed = bgResult.passed + iconResult.totalPass + teardownResult.passed + m2RemResult.passed + m3Result.passed + twitterResult.passed + uiResult.passed;
+  const totalFailed = bgResult.failed + iconResult.totalFail + teardownResult.failed + m2RemResult.failed + m3Result.failed + twitterResult.failed + uiResult.failed;
 
   console.log('\n===============================================================');
   console.log('              ADVERSARIAL VERIFICATION SUMMARY                 ');
@@ -84,6 +93,7 @@ async function main() {
   console.log(`- M2 Remediation Stress Tests:          ${m2RemResult.passed} Passed, ${m2RemResult.failed} Failed`);
   console.log(`- M3 Storage & Popup Stress Tests:      ${m3Result.passed} Passed, ${m3Result.failed} Failed`);
   console.log(`- Twitter/X Unforwarding Tests:         ${twitterResult.passed} Passed, ${twitterResult.failed} Failed`);
+  console.log(`- UI Features & Controls Tests:         ${uiResult.passed} Passed, ${uiResult.failed} Failed`);
   console.log(`- TOTAL PASSED:                         ${totalPassed}`);
   console.log(`- TOTAL FAILED:                         ${totalFailed}`);
   console.log(`- OVERALL STATUS:                       ${totalFailed === 0 ? 'ALL CHECKS PASSED (APPROVE)' : 'FAILURES DETECTED (REQUEST_CHANGES)'}`);
