@@ -145,6 +145,29 @@ describe('Tier 1: Feature Coverage', () => {
       assert.ok(swRule.condition.resourceTypes.includes('script'));
       assert.ok(swRule.condition.resourceTypes.includes('xmlhttprequest'));
     });
+
+    test('T1.F2.11: DNR rule 4 sets non-YouTube Referer on YouTube-initiated /embed/ sub_frame requests', () => {
+      const embedRefRule = rules.find(r => r.id === 4);
+      assert.ok(embedRefRule, 'Rule 4 must exist');
+      assert.strictEqual(embedRefRule.action.type, 'modifyHeaders');
+      assert.strictEqual(embedRefRule.condition.urlFilter, '/embed/');
+      assert.ok(embedRefRule.condition.resourceTypes.includes('sub_frame'));
+      assert.ok(!embedRefRule.condition.resourceTypes.includes('main_frame'), 'Must NEVER target main_frame');
+
+      const hasReferer = embedRefRule.action.requestHeaders.some(h =>
+        h.header.toLowerCase() === 'referer' && h.operation === 'set' && h.value === 'https://peekwave.app/'
+      );
+      assert.ok(hasReferer, 'Must set Referer to https://peekwave.app/');
+
+      const reqDomains = embedRefRule.condition.requestDomains || [];
+      assert.ok(reqDomains.includes('youtube-nocookie.com'), 'Must match youtube-nocookie.com');
+      assert.ok(reqDomains.includes('youtube.com'), 'Must match youtube.com');
+
+      const initDomains = embedRefRule.condition.initiatorDomains || [];
+      assert.ok(initDomains.includes('youtube.com'), 'Must match initiator youtube.com');
+      assert.ok(initDomains.includes('youtu.be'), 'Must match initiator youtu.be');
+      assert.ok(initDomains.includes('youtube-nocookie.com'), 'Must match initiator youtube-nocookie.com');
+    });
   });
 
   // --------------------------------------------------------------------------

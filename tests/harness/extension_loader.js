@@ -348,12 +348,29 @@ const SPEC_RULES = [
       urlFilter: "*",
       excludedRequestDomains: [
         "youtube.com",
+        "youtube-nocookie.com",
         "youtu.be",
         "googlevideo.com",
         "accounts.google.com",
         "doubleclick.net",
         "googlesyndication.com"
       ],
+      resourceTypes: ["sub_frame"]
+    }
+  },
+  {
+    id: 4,
+    priority: 3,
+    action: {
+      type: "modifyHeaders",
+      requestHeaders: [
+        { header: "Referer", operation: "set", value: "https://peekwave.app/" }
+      ]
+    },
+    condition: {
+      urlFilter: "/embed/",
+      requestDomains: ["youtube-nocookie.com", "youtube.com"],
+      initiatorDomains: ["youtube.com", "youtu.be", "youtube-nocookie.com"],
       resourceTypes: ["sub_frame"]
     }
   }

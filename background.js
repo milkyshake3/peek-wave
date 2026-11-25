@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS = {
   sizePreset: 'default',
   growAnimation: true,
   theme: 'dark',
-  disabledSites: []
+  disabledSites: [],
+  youtubeEmbedFallback: false
 };
 
 /**
@@ -521,15 +522,17 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
 
     // Handle GET_SETTINGS request
     if (action === 'GET_SETTINGS' || action === 'getSettings') {
-      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation', 'theme', 'disabledSites'])
+      readStorage(['enabled', 'modifierKey', 'modalSize', 'sizePreset', 'growAnimation', 'theme', 'disabledSites', 'youtubeEmbedFallback'])
         .then((settings) => {
           const resolvedSettings = {
             theme: DEFAULT_SETTINGS.theme,
             disabledSites: [],
+            youtubeEmbedFallback: DEFAULT_SETTINGS.youtubeEmbedFallback,
             ...settings
           };
           resolvedSettings.theme = normalizeTheme(resolvedSettings.theme || DEFAULT_SETTINGS.theme);
           resolvedSettings.disabledSites = normalizeDisabledSites(resolvedSettings.disabledSites);
+          resolvedSettings.youtubeEmbedFallback = Boolean(resolvedSettings.youtubeEmbedFallback);
           sendResponse({ success: true, settings: resolvedSettings });
         })
         .catch((err) => {

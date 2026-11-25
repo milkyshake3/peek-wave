@@ -435,6 +435,37 @@ const MODAL_CSS_TEXT = `
   color: var(--peek-btn-close-color, #ffffff) !important;
 }
 
+/* YouTube Embed Mode Switch Pill */
+.peek-wave-btn-yt-mode {
+  width: auto !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 9999px !important;
+  border: 1px solid var(--peek-header-border, rgba(255, 255, 255, 0.14)) !important;
+  background: transparent !important;
+  color: var(--peek-text-muted, #a3a3a3) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+}
+
+.peek-wave-btn-yt-mode:hover {
+  background: var(--peek-btn-hover, rgba(255, 255, 255, 0.11)) !important;
+  color: var(--peek-text-primary, #ffffff) !important;
+  border-color: var(--peek-domain-border, rgba(255, 255, 255, 0.35)) !important;
+}
+
+.peek-wave-btn-yt-mode.is-embed {
+  background: var(--peek-accent, #ffffff) !important;
+  color: var(--peek-accent-contrast, #000000) !important;
+  border-color: var(--peek-accent, #ffffff) !important;
+}
+
+.peek-wave-btn-yt-mode.hidden {
+  display: none !important;
+}
+
 /* Tooltip Feedback */
 .peek-wave-tooltip {
   position: absolute !important;
@@ -543,6 +574,35 @@ const MODAL_CSS_TEXT = `
 .peek-wave-fallback-open:focus-visible {
   outline: 2px solid var(--peek-accent, #ffffff) !important;
   outline-offset: 2px !important;
+}
+
+.peek-wave-fallback-embed {
+  background: transparent !important;
+  color: var(--peek-text-primary, #ffffff) !important;
+  border: 1px solid var(--peek-domain-border, rgba(255, 255, 255, 0.35)) !important;
+  padding: 4px 10px !important;
+  border-radius: 5px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, transform 0.1s ease !important;
+}
+
+.peek-wave-fallback-embed:hover {
+  background: var(--peek-btn-hover, rgba(255, 255, 255, 0.11)) !important;
+}
+
+.peek-wave-fallback-embed:active {
+  transform: scale(0.96) !important;
+}
+
+.peek-wave-fallback-embed:focus-visible {
+  outline: 2px solid var(--peek-accent, #ffffff) !important;
+  outline-offset: 2px !important;
+}
+
+.peek-wave-fallback-embed.hidden {
+  display: none !important;
 }
 
 .peek-wave-fallback-dismiss {
@@ -704,7 +764,8 @@ const DEFAULT_SETTINGS = {
   sizePreset: 'default', // 'compact' | 'default' | 'large'
   growAnimation: true,
   theme: 'dark', // 'dark' | 'light' | 'auto'
-  disabledSites: []
+  disabledSites: [],
+  youtubeEmbedFallback: false
 };
 
 // Singleton active settings instance
@@ -1309,12 +1370,16 @@ function teardownModal(win, options) {
     resizeStartHandler,
     sizeBtn,
     sizeCycleHandler,
+    ytModeBtn,
+    ytModeHandler,
     closeBtn,
     closeHandler,
     tabBtn,
     tabHandler,
     copyBtn,
     copyHandler,
+    fallbackEmbedBtn,
+    fallbackEmbedHandler,
     fallbackOpenBtn,
     fallbackOpenHandler,
     fallbackDismissBtn,
@@ -1371,6 +1436,9 @@ function teardownModal(win, options) {
   if (sizeBtn && sizeCycleHandler) {
     sizeBtn.removeEventListener('click', sizeCycleHandler);
   }
+  if (ytModeBtn && ytModeHandler) {
+    ytModeBtn.removeEventListener('click', ytModeHandler);
+  }
   if (closeBtn && closeHandler) {
     closeBtn.removeEventListener('click', closeHandler);
   }
@@ -1379,6 +1447,9 @@ function teardownModal(win, options) {
   }
   if (copyBtn && copyHandler) {
     copyBtn.removeEventListener('click', copyHandler);
+  }
+  if (fallbackEmbedBtn && fallbackEmbedHandler) {
+    fallbackEmbedBtn.removeEventListener('click', fallbackEmbedHandler);
   }
   if (fallbackOpenBtn && fallbackOpenHandler) {
     fallbackOpenBtn.removeEventListener('click', fallbackOpenHandler);
@@ -1530,6 +1601,134 @@ function isYouTubeHost(hostname) {
   if (typeof hostname !== 'string' || !hostname.trim()) return false;
   const clean = hostname.trim().toLowerCase().replace(/^www\./, '').replace(/\.+$/, '');
   return clean === 'youtube.com' || clean.endsWith('.youtube.com') || clean === 'youtu.be' || clean.endsWith('.youtu.be');
+}
+
+/**
+ * Parses YouTube timestamp strings (e.g. "42", "42s", "1m30s", "1h2m3s") into integer seconds.
+ * @param {string} raw
+ * @returns {number}
+ */
+function parseYouTubeTimestampToSeconds(raw) {
+  if (typeof raw !== 'string' && typeof raw !== 'number') return 0;
+  const clean = String(raw).trim().replace(/^#/, '').replace(/^t=/i, '').toLowerCase();
+  if (!clean) return 0;
+  if (/^\d+$/.test(clean)) {
+    const val = parseInt(clean, 10);
+    return Number.isFinite(val) && val > 0 ? val : 0;
+  }
+  const hmsMatch = clean.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+  if (!hmsMatch) return 0;
+  const hours = hmsMatch[1] ? parseInt(hmsMatch[1], 10) : 0;
+  const minutes = hmsMatch[2] ? parseInt(hmsMatch[2], 10) : 0;
+  const seconds = hmsMatch[3] ? parseInt(hmsMatch[3], 10) : 0;
+  const total = (hours * 3600) + (minutes * 60) + seconds;
+  return Number.isFinite(total) && total > 0 ? total : 0;
+}
+
+/**
+ * Resolves a YouTube video/shorts/live/playlist URL into a lightweight process-isolated
+ * youtube-nocookie embed URL when Embed Fallback mode is active.
+ * Returns null for non-video YouTube pages (channels, feeds, search) or non-YouTube URLs.
+ * @param {string} rawUrl
+ * @returns {string|null}
+ */
+function resolveYouTubeEmbedUrl(rawUrl) {
+  if (typeof rawUrl !== 'string' || !rawUrl.trim()) return null;
+  let parsed;
+  try {
+    parsed = new URL(rawUrl.trim());
+  } catch {
+    return null;
+  }
+  const proto = parsed.protocol.toLowerCase();
+  if (proto !== 'http:' && proto !== 'https:') return null;
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '').replace(/\.+$/, '');
+  const isNocookie = host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com');
+  if (!isYouTubeHost(host) && !isNocookie) {
+    return null;
+  }
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  let videoId = null;
+  let playlistId = null;
+
+  if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+    if (segments[0] && /^[A-Za-z0-9_-]{6,32}$/.test(segments[0])) {
+      videoId = segments[0];
+    }
+  } else {
+    const first = (segments[0] || '').toLowerCase();
+    if (first === 'watch') {
+      const v = parsed.searchParams.get('v');
+      if (v && /^[A-Za-z0-9_-]{6,32}$/.test(v)) {
+        videoId = v;
+      }
+    } else if (first === 'shorts' || first === 'live') {
+      if (segments[1] && /^[A-Za-z0-9_-]{6,32}$/.test(segments[1])) {
+        videoId = segments[1];
+      }
+    } else if (first === 'embed') {
+      if (segments[1] === 'videoseries') {
+        const l = parsed.searchParams.get('list');
+        if (l && /^[A-Za-z0-9_-]{4,64}$/.test(l)) {
+          playlistId = l;
+        }
+      } else if (segments[1] && /^[A-Za-z0-9_-]{6,32}$/.test(segments[1])) {
+        videoId = segments[1];
+      }
+    } else if (first === 'playlist') {
+      const l = parsed.searchParams.get('list');
+      if (l && /^[A-Za-z0-9_-]{4,64}$/.test(l)) {
+        playlistId = l;
+      }
+    }
+  }
+
+  if (videoId) {
+    const out = new URL(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`);
+    out.searchParams.set('autoplay', '1');
+    out.searchParams.set('rel', '0');
+
+    let rawTime = parsed.searchParams.get('t') || parsed.searchParams.get('start') || '';
+    if (!rawTime && parsed.hash) {
+      const hashMatch = parsed.hash.match(/(?:^#|&)(?:t|start)=([^&]+)/i);
+      if (hashMatch && hashMatch[1]) {
+        rawTime = hashMatch[1];
+      } else if (/^#\d+[smh]?$/i.test(parsed.hash)) {
+        rawTime = parsed.hash.slice(1);
+      }
+    }
+    const startSeconds = parseYouTubeTimestampToSeconds(rawTime);
+    if (startSeconds > 0) {
+      out.searchParams.set('start', String(startSeconds));
+    }
+
+    const list = parsed.searchParams.get('list');
+    if (list && /^[A-Za-z0-9_-]{4,64}$/.test(list)) {
+      out.searchParams.set('list', list);
+    }
+
+    const idx = parsed.searchParams.get('index');
+    if (idx && /^\d+$/.test(idx)) {
+      const parsedIdx = parseInt(idx, 10);
+      if (parsedIdx > 0) {
+        out.searchParams.set('index', String(parsedIdx));
+      }
+    }
+
+    return out.href;
+  }
+
+  if (playlistId) {
+    const out = new URL('https://www.youtube-nocookie.com/embed/videoseries');
+    out.searchParams.set('list', playlistId);
+    out.searchParams.set('autoplay', '1');
+    out.searchParams.set('rel', '0');
+    return out.href;
+  }
+
+  return null;
 }
 
 /**
@@ -1709,6 +1908,14 @@ function mountModal(arg0, arg1, arg2) {
 
   const sizePreset = normalizeModalSize(options.sizePreset || activeSettings.sizePreset || activeSettings.modalSize || 'default');
   const currentTheme = normalizeTheme(options.theme || activeSettings.theme || 'dark');
+  const useEmbedFallback = Boolean(
+    options.youtubeEmbedFallback !== undefined
+      ? options.youtubeEmbedFallback
+      : activeSettings.youtubeEmbedFallback
+  );
+  let youtubeEmbedUrl = resolveYouTubeEmbedUrl(urlDetails.fullUrl);
+  let isEmbedActive = Boolean(useEmbedFallback && youtubeEmbedUrl);
+  const initialIframeSrc = isEmbedActive ? youtubeEmbedUrl : urlDetails.fullUrl;
 
   // Step 1: Create host element and apply critical inline reset styles
   const hostElement = doc.createElement('peek-wave-container');
@@ -1819,6 +2026,13 @@ function mountModal(arg0, arg1, arg2) {
 
   const headerRight = doc.createElement('div');
   headerRight.className = 'peek-wave-header-right';
+
+  // YouTube Embed Mode Switch Pill (kept outside .peek-wave-header-actions to preserve 3-button contract)
+  const ytModeBtn = doc.createElement('button');
+  ytModeBtn.type = 'button';
+  ytModeBtn.className = 'peek-wave-btn peek-wave-btn-yt-mode hidden';
+  ytModeBtn.textContent = 'Embed';
+  ytModeBtn.setAttribute('aria-pressed', 'false');
 
   // Quick Size Preset Cycle Button (kept outside .peek-wave-header-actions to preserve 3-button contract)
   const formatSizeLabel = (sz) => sz.charAt(0).toUpperCase() + sz.slice(1);
@@ -1988,6 +2202,7 @@ function mountModal(arg0, arg1, arg2) {
   headerActions.appendChild(tabBtn);
   headerActions.appendChild(closeBtn);
 
+  headerRight.appendChild(ytModeBtn);
   headerRight.appendChild(sizeBtn);
   headerRight.appendChild(headerActions);
 
@@ -2019,7 +2234,7 @@ function mountModal(arg0, arg1, arg2) {
   iframe.setAttribute('loading', 'eager');
   iframe.setAttribute('importance', 'high');
   iframe.setAttribute('referrerpolicy', 'origin-when-cross-origin');
-  iframe.src = urlDetails.fullUrl;
+  iframe.src = initialIframeSrc;
 
   // Load-Failure / Timeout Fallback Banner (programmatic DOM, zero innerHTML)
   const fallbackBanner = doc.createElement('div');
@@ -2032,6 +2247,11 @@ function mountModal(arg0, arg1, arg2) {
 
   const fallbackActions = doc.createElement('div');
   fallbackActions.className = 'peek-wave-fallback-actions';
+
+  const fallbackEmbedBtn = doc.createElement('button');
+  fallbackEmbedBtn.type = 'button';
+  fallbackEmbedBtn.className = 'peek-wave-fallback-embed hidden';
+  fallbackEmbedBtn.textContent = 'Try Embed';
 
   const fallbackOpenBtn = doc.createElement('button');
   fallbackOpenBtn.type = 'button';
@@ -2052,12 +2272,14 @@ function mountModal(arg0, arg1, arg2) {
   };
   fallbackDismissBtn.addEventListener('click', fallbackDismissHandler);
 
+  fallbackActions.appendChild(fallbackEmbedBtn);
   fallbackActions.appendChild(fallbackOpenBtn);
   fallbackActions.appendChild(fallbackDismissBtn);
   fallbackBanner.appendChild(fallbackText);
   fallbackBanner.appendChild(fallbackActions);
 
   // Loading lifecycle handlers
+  let loadingTimeout = null;
   const hideLoading = () => {
     spinner.classList.add('hidden');
     progressBar.classList.add('hidden');
@@ -2069,8 +2291,68 @@ function mountModal(arg0, arg1, arg2) {
   const hideFallbackBanner = () => {
     fallbackBanner.classList.add('hidden');
   };
+  const showLoading = () => {
+    spinner.classList.remove('hidden');
+    progressBar.classList.remove('hidden');
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
+    }
+    loadingTimeout = setTimeout(() => {
+      hideLoading();
+      showFallbackBanner('Taking longer than usual?');
+    }, 8000);
+    if (currentModal) currentModal.loadingTimeout = loadingTimeout;
+  };
 
-  let loadingTimeout = null;
+  const updateYouTubeModeUi = () => {
+    if (!youtubeEmbedUrl) {
+      ytModeBtn.classList.add('hidden');
+      ytModeBtn.classList.remove('is-embed');
+      ytModeBtn.setAttribute('aria-pressed', 'false');
+      fallbackEmbedBtn.classList.add('hidden');
+      return;
+    }
+    ytModeBtn.classList.remove('hidden');
+    ytModeBtn.classList.toggle('is-embed', isEmbedActive);
+    ytModeBtn.setAttribute('aria-pressed', isEmbedActive ? 'true' : 'false');
+    ytModeBtn.title = isEmbedActive
+      ? 'Switch to full YouTube page'
+      : 'Switch to lightweight YouTube embed player';
+    ytModeBtn.setAttribute(
+      'aria-label',
+      isEmbedActive
+        ? 'YouTube embed mode active; switch to full YouTube page'
+        : 'Switch to lightweight YouTube embed player'
+    );
+    fallbackEmbedBtn.classList.toggle('hidden', isEmbedActive);
+  };
+
+  const setYouTubeEmbedMode = (enableEmbed) => {
+    if (!youtubeEmbedUrl) return;
+    isEmbedActive = Boolean(enableEmbed);
+    if (currentModal) {
+      currentModal.isEmbedActive = isEmbedActive;
+    }
+    updateYouTubeModeUi();
+    hideFallbackBanner();
+    showLoading();
+    iframe.src = isEmbedActive ? youtubeEmbedUrl : urlDetails.fullUrl;
+  };
+
+  const ytModeHandler = (e) => {
+    e.stopPropagation();
+    setYouTubeEmbedMode(!isEmbedActive);
+  };
+  ytModeBtn.addEventListener('click', ytModeHandler);
+
+  const fallbackEmbedHandler = (e) => {
+    e.stopPropagation();
+    setYouTubeEmbedMode(true);
+  };
+  fallbackEmbedBtn.addEventListener('click', fallbackEmbedHandler);
+
+  updateYouTubeModeUi();
+
   const iframeLoadHandler = () => {
     hideLoading();
     if (loadingTimeout) {
@@ -2089,12 +2371,9 @@ function mountModal(arg0, arg1, arg2) {
     }
     showFallbackBanner("This site couldn't be previewed.");
   };
-  iframe.addEventListener('load', iframeLoadHandler, { once: true });
-  iframe.addEventListener('error', iframeErrorHandler, { once: true });
-  loadingTimeout = setTimeout(() => {
-    hideLoading();
-    showFallbackBanner('Taking longer than usual?');
-  }, 8000);
+  iframe.addEventListener('load', iframeLoadHandler);
+  iframe.addEventListener('error', iframeErrorHandler);
+  showLoading();
 
   // Bottom-right corner resize handle
   const resizeHandle = doc.createElement('div');
@@ -2313,6 +2592,10 @@ function mountModal(arg0, arg1, arg2) {
     sizeBtn,
     sizeSvg,
     sizeCycleHandler,
+    ytModeBtn,
+    ytModeHandler,
+    isEmbedActive,
+    youtubeEmbedUrl,
     closeBtn,
     tabBtn,
     copyBtn,
@@ -2324,6 +2607,8 @@ function mountModal(arg0, arg1, arg2) {
     loadingTimeout,
     fallbackBanner,
     fallbackText,
+    fallbackEmbedBtn,
+    fallbackEmbedHandler,
     fallbackOpenBtn,
     fallbackOpenHandler,
     fallbackDismissBtn,
@@ -2373,7 +2658,12 @@ function mountModal(arg0, arg1, arg2) {
                 urlDetails.displayDomain = newDetails.displayDomain;
                 urlDetails.pathSnippet = newDetails.pathSnippet;
                 urlDetails.protocol = newDetails.protocol;
-                iframe.src = newDetails.fullUrl;
+                youtubeEmbedUrl = resolveYouTubeEmbedUrl(newDetails.fullUrl);
+                isEmbedActive = Boolean(useEmbedFallback && youtubeEmbedUrl);
+                activeModalInstance.youtubeEmbedUrl = youtubeEmbedUrl;
+                activeModalInstance.isEmbedActive = isEmbedActive;
+                updateYouTubeModeUi();
+                iframe.src = isEmbedActive ? youtubeEmbedUrl : newDetails.fullUrl;
               }
             }
           }
@@ -2460,7 +2750,8 @@ function handleCaptureClick(e, win) {
     sizePreset: activeSettings.sizePreset || activeSettings.modalSize,
     theme: activeSettings.theme,
     linkRect: linkRect,
-    growAnimation: activeSettings.growAnimation !== false
+    growAnimation: activeSettings.growAnimation !== false,
+    youtubeEmbedFallback: Boolean(activeSettings.youtubeEmbedFallback)
   });
 }
 
@@ -2515,6 +2806,9 @@ function applySettingsUpdate(s) {
   if (s.disabledSites !== undefined) {
     activeSettings.disabledSites = normalizeDisabledSites(s.disabledSites);
   }
+  if (s.youtubeEmbedFallback !== undefined) {
+    activeSettings.youtubeEmbedFallback = Boolean(s.youtubeEmbedFallback);
+  }
 }
 
 /**
@@ -2552,7 +2846,7 @@ function initContentScript(win, chromeObj) {
   }
 
   // Load storage settings (with fallback from empty sync storage to local storage)
-  const storageKeys = ['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme', 'disabledSites'];
+  const storageKeys = ['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme', 'disabledSites', 'youtubeEmbedFallback'];
   const storageArea = targetChrome?.storage?.sync || targetChrome?.storage?.local;
   const hasStoredKeys = (obj) => Boolean(obj && typeof obj === 'object' && Object.keys(obj).length > 0);
 
@@ -2644,6 +2938,8 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveFaviconUrl,
     unregisterHostServiceWorkers,
     isYouTubeHost,
+    parseYouTubeTimestampToSeconds,
+    resolveYouTubeEmbedUrl,
     pauseCompetingHostVideos,
     handleCaptureClick,
     initContentScript,

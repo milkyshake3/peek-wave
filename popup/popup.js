@@ -24,7 +24,8 @@ const FallbackStorage = {
     sizePreset: 'default',
     growAnimation: true,
     theme: 'dark',
-    disabledSites: []
+    disabledSites: [],
+    youtubeEmbedFallback: false
   },
   normalizeModifierKey(key) {
     if (typeof key !== 'string') return 'shift';
@@ -181,6 +182,9 @@ function initPopup(win, chromeObj) {
   let themeToggleBtn = targetDoc.getElementById('themeToggleBtn') ||
                        targetDoc.querySelector('.theme-toggle-btn');
 
+  let youtubeEmbedToggleEl = targetDoc.getElementById('youtubeEmbedToggle') ||
+                             targetDoc.querySelector('input[name="youtubeEmbedFallback"]');
+
   // In bare-DOM test environments (e.g. dom_simulator without HTML fixture), create missing elements
   if (!toggleEl && targetDoc.body) {
     toggleEl = targetDoc.createElement('input');
@@ -196,6 +200,14 @@ function initPopup(win, chromeObj) {
     growToggleEl.type = 'checkbox';
     growToggleEl.checked = true;
     targetDoc.body.appendChild(growToggleEl);
+  }
+
+  if (!youtubeEmbedToggleEl && targetDoc.body) {
+    youtubeEmbedToggleEl = targetDoc.createElement('input');
+    youtubeEmbedToggleEl.id = 'youtubeEmbedToggle';
+    youtubeEmbedToggleEl.type = 'checkbox';
+    youtubeEmbedToggleEl.checked = false;
+    targetDoc.body.appendChild(youtubeEmbedToggleEl);
   }
 
   if (!modifierSelect && targetDoc.body) {
@@ -234,6 +246,9 @@ function initPopup(win, chromeObj) {
       }
       if (id === 'themeToggleBtn') {
         return themeToggleBtn;
+      }
+      if (id === 'youtubeEmbedToggle') {
+        return youtubeEmbedToggleEl;
       }
       return origGetById(id);
     };
@@ -360,6 +375,12 @@ function initPopup(win, chromeObj) {
     }
     growToggleEl.checked = true;
   }
+  if (youtubeEmbedToggleEl) {
+    if (!youtubeEmbedToggleEl.type) {
+      youtubeEmbedToggleEl.type = youtubeEmbedToggleEl.getAttribute('type') || 'checkbox';
+    }
+    youtubeEmbedToggleEl.checked = false;
+  }
   if (modifierSelect) {
     modifierSelect.value = 'shift';
   }
@@ -410,6 +431,9 @@ function initPopup(win, chromeObj) {
     }
     if (sizeFieldset) {
       sizeFieldset.disabled = !isEnabled;
+    }
+    if (youtubeEmbedToggleEl) {
+      youtubeEmbedToggleEl.disabled = !isEnabled;
     }
   }
 
@@ -581,7 +605,7 @@ function initPopup(win, chromeObj) {
       const area = targetChrome.storage.sync || targetChrome.storage.local;
       if (area) {
         settings = await new Promise((resolve) => {
-          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme', 'disabledSites'], (res) => {
+          area.get(['enabled', 'modifierKey', 'sizePreset', 'modalSize', 'growAnimation', 'theme', 'disabledSites', 'youtubeEmbedFallback'], (res) => {
             resolve({ ...(Storage.DEFAULT_SETTINGS || FallbackStorage.DEFAULT_SETTINGS), ...(res || {}) });
           });
         });
@@ -590,6 +614,7 @@ function initPopup(win, chromeObj) {
 
     const isEnabled = settings.enabled !== false;
     const isGrow = settings.growAnimation !== false;
+    const isYoutubeEmbed = Boolean(settings.youtubeEmbedFallback);
     const modKey = resolveNormalizeModifier(settings.modifierKey);
     const sizeVal = resolveNormalizeSize(settings.modalSize || settings.sizePreset);
     const themeVal = resolveNormalizeTheme(settings.theme || 'dark');
@@ -600,6 +625,9 @@ function initPopup(win, chromeObj) {
     }
     if (growToggleEl) {
       growToggleEl.checked = isGrow;
+    }
+    if (youtubeEmbedToggleEl) {
+      youtubeEmbedToggleEl.checked = isYoutubeEmbed;
     }
     if (modifierSelect) {
       modifierSelect.value = modKey;
@@ -623,6 +651,7 @@ function initPopup(win, chromeObj) {
   function saveSettings() {
     const isEnabled = toggleEl ? Boolean(toggleEl.checked) : true;
     const isGrow = growToggleEl ? Boolean(growToggleEl.checked) : true;
+    const isYoutubeEmbed = youtubeEmbedToggleEl ? Boolean(youtubeEmbedToggleEl.checked) : false;
     const modifierVal = modifierSelect ? resolveNormalizeModifier(modifierSelect.value) : 'shift';
     const sizeVal = sizeSelect ? resolveNormalizeSize(sizeSelect.value) : 'default';
     const themeVal = resolveNormalizeTheme(currentTheme);
@@ -636,7 +665,8 @@ function initPopup(win, chromeObj) {
       sizePreset: sizeVal,
       growAnimation: isGrow,
       theme: themeVal,
-      disabledSites: sitesVal
+      disabledSites: sitesVal,
+      youtubeEmbedFallback: isYoutubeEmbed
     };
 
     // Keep radio pills synchronized
@@ -730,6 +760,12 @@ function initPopup(win, chromeObj) {
     });
   }
 
+  if (youtubeEmbedToggleEl) {
+    youtubeEmbedToggleEl.addEventListener('change', () => {
+      saveSettings();
+    });
+  }
+
   if (modifierSelect) {
     modifierSelect.addEventListener('change', () => {
       syncModifierRadios(modifierSelect.value);
@@ -772,6 +808,7 @@ function initPopup(win, chromeObj) {
     resetDefaultsBtn.addEventListener('click', () => {
       if (toggleEl) toggleEl.checked = true;
       if (growToggleEl) growToggleEl.checked = true;
+      if (youtubeEmbedToggleEl) youtubeEmbedToggleEl.checked = false;
       if (modifierSelect) modifierSelect.value = 'shift';
       if (sizeSelect) sizeSelect.value = 'default';
       disabledSites = [];
@@ -800,6 +837,7 @@ function initPopup(win, chromeObj) {
   return {
     toggleEl,
     growToggleEl,
+    youtubeEmbedToggleEl,
     modifierSelect,
     sizeSelect,
     themeToggleBtn,

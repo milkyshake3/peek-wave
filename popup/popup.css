@@ -817,7 +817,8 @@ body.extension-disabled .segmented-control {
 }
 
 body.extension-disabled .group-card,
-body.extension-disabled .site-card {
+body.extension-disabled .site-card,
+body.extension-disabled .fallback-card {
   opacity: 0.48;
 }
 

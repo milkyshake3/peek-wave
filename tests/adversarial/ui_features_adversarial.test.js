@@ -430,6 +430,57 @@ async function runUiFeaturesAdversarialTests() {
     assert.ok(!popupCss.includes('opacity: 0.45;\n  pointer-events: none;'), 'Disabled opacity must not stack doubly');
   });
 
+  await testAsync('4.4: YouTube Embed Mode toggle defaults to false, syncs storage/fallback, broadcasts live, disables when off, and resets', async () => {
+    const sharedChrome = createChromeMock();
+    const tabWin = createBrowserEnvironment('<a id="yt" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">YT</a>');
+    tabWin.chrome = sharedChrome;
+    const content = loadLiveContentScript(tabWin, sharedChrome);
+
+    const { doc, popup } = createPopupEnv({ chrome: sharedChrome });
+    await popup.loadSettings();
+
+    const ytToggle = doc.getElementById('youtubeEmbedToggle');
+    assert.ok(ytToggle, 'youtubeEmbedToggle element must exist');
+    assert.strictEqual(ytToggle.checked, false, 'youtubeEmbedFallback must default to false');
+    assert.strictEqual(content.getSettings().youtubeEmbedFallback, false);
+
+    // Enable in popup -> syncs to storage and broadcasts live to content script
+    ytToggle.checked = true;
+    ytToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 15));
+
+    const stored1 = await Storage.readSettings(sharedChrome);
+    assert.strictEqual(stored1.youtubeEmbedFallback, true);
+    assert.strictEqual(content.getSettings().youtubeEmbedFallback, true);
+
+    // Quota fallback persists youtubeEmbedFallback to local storage
+    sharedChrome.storage.sync.simulateQuotaError = true;
+    ytToggle.checked = false;
+    ytToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 15));
+    const localData = await sharedChrome.storage.local.get('youtubeEmbedFallback');
+    assert.strictEqual(localData.youtubeEmbedFallback, false);
+    sharedChrome.storage.sync.simulateQuotaError = false;
+
+    // Master toggle off disables youtubeEmbedToggle
+    popup.toggleEl.checked = false;
+    popup.toggleEl.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(ytToggle.disabled, true);
+
+    // Re-enable, set embed true, then Reset Defaults -> returns to false
+    popup.toggleEl.checked = true;
+    popup.toggleEl.dispatchEvent(new Event('change', { bubbles: true }));
+    ytToggle.checked = true;
+    ytToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 10));
+
+    doc.getElementById('resetDefaultsBtn').dispatchEvent(new Event('click', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 15));
+    assert.strictEqual(ytToggle.checked, false, 'Reset Defaults must reset youtubeEmbedFallback to false');
+    assert.strictEqual(content.getSettings().youtubeEmbedFallback, false);
+  });
+
   console.log('\n========================================================================');
   console.log(`   UI FEATURES & CONTROLS ADVERSARIAL SUMMARY: ${passed} Passed, ${failed} Failed`);
   console.log('========================================================================\n');

@@ -157,6 +157,21 @@
           <option value="large">large</option>
         </select>
       </fieldset>
+
+      <!-- Section 5: YouTube Embed Fallback -->
+      <section class="setting-card toggle-card fallback-card" id="youtubeEmbedCard">
+        <div class="card-info">
+          <label for="youtubeEmbedToggle" class="card-label">YouTube Embed Mode</label>
+          <p class="card-desc" id="youtubeEmbedDesc">Lightweight isolated player if YouTube crashes</p>
+        </div>
+        <div class="toggle-control">
+          <label class="switch" for="youtubeEmbedToggle">
+            <input type="checkbox" id="youtubeEmbedToggle" name="youtubeEmbedFallback" aria-describedby="youtubeEmbedDesc">
+            <span class="slider" aria-hidden="true"></span>
+            <span class="sr-only">Use YouTube embed fallback player</span>
+          </label>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->

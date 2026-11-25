@@ -61,19 +61,21 @@ with open(POPUP_HTML_PATH, 'r', encoding='utf-8') as f:
     popup_html = f.read()
 
 def test_no_embed_rewriting():
-    # Verify no string replacement targeting youtube.com/embed
-    assert not re.search(r'replace\([^)]*embed', content_js, re.I), "Found embed string replacement in content.js"
-    assert not re.search(r'\/embed\/', content_js), "Found literal /embed/ in content.js"
-    assert not re.search(r'youtube\.com\/embed', content_js), "Found youtube.com/embed in content.js"
+    # Verify default configuration keeps youtubeEmbedFallback disabled (full desktop YouTube by default)
+    assert re.search(r'youtubeEmbedFallback:\s*false', content_js), "DEFAULT_SETTINGS must disable youtubeEmbedFallback by default"
+    assert not re.search(r'youtube\.com\/embed', content_js), "Found legacy youtube.com/embed rewriting in content.js"
+    assert "https://www.youtube-nocookie.com/embed/" in content_js, "Opt-in embed fallback must target youtube-nocookie.com/embed/"
 
-run_test("1.1: content/content.js contains zero embed replacement patterns", test_no_embed_rewriting)
+run_test("1.1: content/content.js preserves full desktop YouTube by default and isolates opt-in embed fallback to youtube-nocookie.com", test_no_embed_rewriting)
 
 def test_iframe_src_assignment():
-    # Verify iframe.src is assigned urlDetails.fullUrl directly
-    match = re.search(r'iframe\.src\s*=\s*urlDetails\.fullUrl;', content_js)
-    assert match, "iframe.src is not assigned urlDetails.fullUrl directly"
+    # Verify iframe.src binds to initialIframeSrc computed as urlDetails.fullUrl unless embed fallback is opted in
+    assert re.search(r'const\s+initialIframeSrc\s*=\s*isEmbedActive\s*\?\s*youtubeEmbedUrl\s*:\s*urlDetails\.fullUrl;', content_js), \
+        "initialIframeSrc must default to urlDetails.fullUrl when embed fallback is inactive"
+    match = re.search(r'iframe\.src\s*=\s*initialIframeSrc;', content_js)
+    assert match, "iframe.src must bind to initialIframeSrc"
 
-run_test("1.2: iframe.src is bound directly to urlDetails.fullUrl", test_iframe_src_assignment)
+run_test("1.2: iframe.src defaults to urlDetails.fullUrl and uses initialIframeSrc", test_iframe_src_assignment)
 
 # Suite 2: Strict Top Navigation Omission
 print("\n> Suite 2: Sandbox Security & Top Navigation Omission")
@@ -176,6 +178,28 @@ def test_compositing_optimizations():
         assert 'will-change' not in modal_rule_match.group(1), "Found will-change on .peek-wave-modal in content.js"
 
 run_test("4.2: Compositing optimizations: 4px blur, translateZ(0), isolation, contain strict, no will-change churn", test_compositing_optimizations)
+
+def test_rules_json_embed_referer():
+    rule4 = next((r for r in rules_data if r.get('id') == 4), None)
+    assert rule4 is not None, "Rule 4 missing in rules.json"
+    assert rule4.get('action', {}).get('type') == 'modifyHeaders', "Rule 4 must use modifyHeaders"
+    req_headers = rule4.get('action', {}).get('requestHeaders', [])
+    referer_hdr = next((h for h in req_headers if h.get('header', '').lower() == 'referer'), None)
+    assert referer_hdr is not None, "Rule 4 must modify Referer header"
+    assert referer_hdr.get('operation') == 'set', "Rule 4 must set Referer"
+    assert referer_hdr.get('value') == 'https://peekwave.app/', "Rule 4 must set Referer to https://peekwave.app/"
+
+    cond = rule4.get('condition', {})
+    assert cond.get('urlFilter') == '/embed/', "Rule 4 urlFilter must be /embed/"
+    for d in ('youtube-nocookie.com', 'youtube.com'):
+        assert d in cond.get('requestDomains', []), f"Rule 4 requestDomains missing {d}"
+    for d in ('youtube.com', 'youtu.be', 'youtube-nocookie.com'):
+        assert d in cond.get('initiatorDomains', []), f"Rule 4 initiatorDomains missing {d}"
+    res_types = cond.get('resourceTypes', [])
+    assert 'sub_frame' in res_types, "Rule 4 must target sub_frame"
+    assert 'main_frame' not in res_types, "Rule 4 must NEVER target main_frame"
+
+run_test("4.3: rules.json Rule 4 sets non-YouTube Referer on YouTube-initiated /embed/ sub_frame requests", test_rules_json_embed_referer)
 
 print("\n--------------------------------------------------------")
 print(f"M1_YT PYTHON SUITE SUMMARY: {passed_tests} passed, {failed_tests} failed, {total_tests} total")

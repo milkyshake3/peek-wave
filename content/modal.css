@@ -414,6 +414,37 @@
   color: var(--peek-btn-close-color, #ffffff) !important;
 }
 
+/* YouTube Embed Mode Switch Pill */
+.peek-wave-btn-yt-mode {
+  width: auto !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 9999px !important;
+  border: 1px solid var(--peek-header-border, rgba(255, 255, 255, 0.14)) !important;
+  background: transparent !important;
+  color: var(--peek-text-muted, #a3a3a3) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+}
+
+.peek-wave-btn-yt-mode:hover {
+  background: var(--peek-btn-hover, rgba(255, 255, 255, 0.11)) !important;
+  color: var(--peek-text-primary, #ffffff) !important;
+  border-color: var(--peek-domain-border, rgba(255, 255, 255, 0.35)) !important;
+}
+
+.peek-wave-btn-yt-mode.is-embed {
+  background: var(--peek-accent, #ffffff) !important;
+  color: var(--peek-accent-contrast, #000000) !important;
+  border-color: var(--peek-accent, #ffffff) !important;
+}
+
+.peek-wave-btn-yt-mode.hidden {
+  display: none !important;
+}
+
 /* Tooltip Feedback */
 .peek-wave-tooltip {
   position: absolute !important;
@@ -522,6 +553,35 @@
 .peek-wave-fallback-open:focus-visible {
   outline: 2px solid var(--peek-accent, #ffffff) !important;
   outline-offset: 2px !important;
+}
+
+.peek-wave-fallback-embed {
+  background: transparent !important;
+  color: var(--peek-text-primary, #ffffff) !important;
+  border: 1px solid var(--peek-domain-border, rgba(255, 255, 255, 0.35)) !important;
+  padding: 4px 10px !important;
+  border-radius: 5px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, transform 0.1s ease !important;
+}
+
+.peek-wave-fallback-embed:hover {
+  background: var(--peek-btn-hover, rgba(255, 255, 255, 0.11)) !important;
+}
+
+.peek-wave-fallback-embed:active {
+  transform: scale(0.96) !important;
+}
+
+.peek-wave-fallback-embed:focus-visible {
+  outline: 2px solid var(--peek-accent, #ffffff) !important;
+  outline-offset: 2px !important;
+}
+
+.peek-wave-fallback-embed.hidden {
+  display: none !important;
 }
 
 .peek-wave-fallback-dismiss {

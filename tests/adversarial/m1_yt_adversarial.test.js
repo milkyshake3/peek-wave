@@ -154,9 +154,12 @@ async function runM1YtAdversarialTests() {
           assert.ok(validOperations.has(h.operation), `Invalid operation: ${h.operation}`);
           assert.strictEqual(h.operation, 'set', 'Request header rules must perform "set" operation');
         }
-        const excluded = rule.condition?.excludedRequestDomains || [];
-        for (const ytDomain of ['youtube.com', 'youtu.be', 'googlevideo.com', 'accounts.google.com']) {
-          assert.ok(excluded.includes(ytDomain), `Request header spoofing must exclude ${ytDomain}`);
+        const modifiesSecFetch = rule.action.requestHeaders.some(h => h.header.toLowerCase().startsWith('sec-fetch-'));
+        if (modifiesSecFetch) {
+          const excluded = rule.condition?.excludedRequestDomains || [];
+          for (const ytDomain of ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'googlevideo.com', 'accounts.google.com']) {
+            assert.ok(excluded.includes(ytDomain), `Request header spoofing must exclude ${ytDomain}`);
+          }
         }
       }
     }
@@ -190,7 +193,11 @@ async function runM1YtAdversarialTests() {
   test('1.7: Resource types strictly target "sub_frame" and NEVER "main_frame"', () => {
     const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
     for (const rule of modifyRules) {
-      assert.strictEqual(rule.condition.urlFilter, '*', 'Condition urlFilter must be wildcard "*"');
+      if (Array.isArray(rule.condition.requestDomains) && rule.condition.requestDomains.length > 0) {
+        assert.strictEqual(rule.condition.urlFilter, '/embed/', 'Scoped requestDomains rule urlFilter must be "/embed/"');
+      } else {
+        assert.strictEqual(rule.condition.urlFilter, '*', 'Global condition urlFilter must be wildcard "*"');
+      }
       assert.ok(Array.isArray(rule.condition.resourceTypes), 'resourceTypes must be an array');
       assert.ok(
         rule.condition.resourceTypes.includes('sub_frame'),
@@ -220,6 +227,27 @@ async function runM1YtAdversarialTests() {
     assert.ok(subframeResource, 'declarative_net_request must declare "subframe_headers" resource');
     assert.strictEqual(subframeResource.enabled, true, 'subframe_headers must be enabled');
     assert.strictEqual(subframeResource.path, 'rules.json', 'subframe_headers path must point to rules.json');
+  });
+
+  test('1.9: Rule 4 sets non-YouTube Referer on YouTube-initiated /embed/ sub_frame requests to prevent Error 152-4', () => {
+    const rule = rules.find(r => r.id === 4);
+    assert.ok(rule, 'Rule 4 must exist');
+    assert.strictEqual(rule.action.type, 'modifyHeaders');
+    assert.ok(Array.isArray(rule.action.requestHeaders));
+    const refererMod = rule.action.requestHeaders.find(h => h.header.toLowerCase() === 'referer');
+    assert.ok(refererMod, 'Rule 4 must modify Referer request header');
+    assert.strictEqual(refererMod.operation, 'set');
+    assert.strictEqual(refererMod.value, 'https://peekwave.app/');
+
+    assert.strictEqual(rule.condition.urlFilter, '/embed/');
+    assert.ok(Array.isArray(rule.condition.requestDomains));
+    assert.ok(rule.condition.requestDomains.includes('youtube-nocookie.com'));
+    assert.ok(rule.condition.requestDomains.includes('youtube.com'));
+    assert.ok(Array.isArray(rule.condition.initiatorDomains));
+    assert.ok(rule.condition.initiatorDomains.includes('youtube.com'));
+    assert.ok(rule.condition.initiatorDomains.includes('youtu.be'));
+    assert.ok(rule.condition.initiatorDomains.includes('youtube-nocookie.com'));
+    assert.deepStrictEqual(rule.condition.resourceTypes, ['sub_frame']);
   });
 
   // ==========================================================================
@@ -792,6 +820,121 @@ async function runM1YtAdversarialTests() {
     assert.strictEqual((modalEl._listeners.get('animationend') || []).length, 1);
     teardownModal(win);
     assert.strictEqual((modalEl._listeners.get('animationend') || []).length, 0, 'animationend listener must be detached on teardown');
+  });
+
+  test('6.14: Default youtubeEmbedFallback=false keeps full YouTube URL, shows Embed switch inactive, and preserves 3-button header-actions', () => {
+    const { win } = setupEnv();
+    const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const modal = mountModal(url, { win });
+    assert.strictEqual(modal.iframe.src, url);
+    assert.strictEqual(modal.isEmbedActive, false);
+    assert.strictEqual(modal.ytModeBtn.classList.contains('hidden'), false);
+    assert.strictEqual(modal.ytModeBtn.getAttribute('aria-pressed'), 'false');
+    assert.strictEqual(modal.shadowRoot.querySelector('.peek-wave-header-actions').querySelectorAll('button').length, 3);
+    teardownModal(win);
+  });
+
+  test('6.15: Opt-in youtubeEmbedFallback=true loads youtube-nocookie.com/embed while keeping Copy Link & Open Tab on original URL', () => {
+    const { win, chrome } = setupEnv();
+    const watchUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s&list=PLtest123&index=2';
+    const modal = mountModal(watchUrl, { win, youtubeEmbedFallback: true });
+    assert.strictEqual(modal.isEmbedActive, true);
+    assert.strictEqual(
+      modal.iframe.src,
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&start=90&list=PLtest123&index=2'
+    );
+    assert.strictEqual(modal.domainSpan.textContent, 'youtube.com');
+
+    // Copy Link copies canonical watch URL
+    let copiedText = '';
+    win.navigator.clipboard = { writeText: (txt) => { copiedText = txt; return Promise.resolve(); } };
+    modal.copyBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(copiedText, watchUrl);
+
+    // Open in New Tab opens canonical watch URL
+    let sentTabMessage = null;
+    chrome.runtime.sendMessage = (msg) => {
+      sentTabMessage = msg;
+    };
+    modal.tabBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.ok(sentTabMessage, 'OPEN_TAB message must be dispatched');
+    assert.strictEqual(sentTabMessage.action, 'OPEN_TAB');
+    assert.strictEqual(sentTabMessage.url, watchUrl);
+
+    // Shorts, Live, youtu.be, and Playlist conversion checks
+    const cases = [
+      ['https://youtu.be/dQw4w9WgXcQ?t=42s', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&start=42'],
+      ['https://www.youtube.com/shorts/5qap5aO4i9A', 'https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1&rel=0'],
+      ['https://www.youtube.com/live/jfKfPfyJRdk', 'https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&rel=0'],
+      ['https://www.youtube.com/playlist?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo', 'https://www.youtube-nocookie.com/embed/videoseries?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo&autoplay=1&rel=0']
+    ];
+    for (const [input, expected] of cases) {
+      const m = mountModal(input, { win, youtubeEmbedFallback: true });
+      assert.strictEqual(m.iframe.src, expected, `Expected embed URL for ${input}`);
+      teardownModal(win);
+    }
+  });
+
+  test('6.16: Non-video YouTube pages stay full URLs and hide Embed switch even when youtubeEmbedFallback=true', () => {
+    const { win } = setupEnv();
+    const nonVideoUrls = [
+      'https://www.youtube.com/@Veritasium',
+      'https://www.youtube.com/channel/UCBJycsmduvYEL83R_U4JriQ',
+      'https://www.youtube.com/results?search_query=quantum+computing'
+    ];
+    for (const url of nonVideoUrls) {
+      const modal = mountModal(url, { win, youtubeEmbedFallback: true });
+      assert.strictEqual(modal.iframe.src, url);
+      assert.strictEqual(modal.isEmbedActive, false);
+      assert.strictEqual(modal.ytModeBtn.classList.contains('hidden'), true);
+      assert.strictEqual(modal.fallbackEmbedBtn.classList.contains('hidden'), true);
+      teardownModal(win);
+    }
+  });
+
+  test('6.17: Header Embed pill toggles Full <-> Embed live and fallback Try Embed button switches errored preview to embed', () => {
+    const { win } = setupEnv();
+    const { Event } = require('../harness/dom_simulator');
+    const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=15';
+    const modal = mountModal(url, { win, youtubeEmbedFallback: false });
+    assert.strictEqual(modal.iframe.src, url);
+    assert.strictEqual(modal.fallbackEmbedBtn.classList.contains('hidden'), false);
+
+    // Toggle to Embed via header pill
+    modal.ytModeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(modal.isEmbedActive, true);
+    assert.strictEqual(modal.ytModeBtn.getAttribute('aria-pressed'), 'true');
+    assert.strictEqual(modal.iframe.src, 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&start=15');
+    assert.strictEqual(modal.fallbackEmbedBtn.classList.contains('hidden'), true);
+
+    // Toggle back to Full via header pill
+    modal.ytModeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(modal.isEmbedActive, false);
+    assert.strictEqual(modal.ytModeBtn.getAttribute('aria-pressed'), 'false');
+    assert.strictEqual(modal.iframe.src, url);
+    assert.strictEqual(modal.fallbackEmbedBtn.classList.contains('hidden'), false);
+
+    // Simulate iframe error -> fallback banner appears with Try Embed button -> clicking switches to Embed
+    modal.iframe.dispatchEvent(new Event('error'));
+    assert.strictEqual(modal.fallbackBanner.classList.contains('hidden'), false);
+    modal.fallbackEmbedBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(modal.isEmbedActive, true);
+    assert.strictEqual(modal.fallbackBanner.classList.contains('hidden'), true);
+    assert.strictEqual(modal.iframe.src, 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&start=15');
+    teardownModal(win);
+  });
+
+  test('6.18: Teardown cleanly unbinds ytModeBtn and fallbackEmbedBtn listeners with zero residual listeners', () => {
+    const { win } = setupEnv();
+    const modal = mountModal('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { win });
+    const ytBtn = modal.ytModeBtn;
+    const fbEmbedBtn = modal.fallbackEmbedBtn;
+    assert.strictEqual((ytBtn._listeners.get('click') || []).length, 1);
+    assert.strictEqual((fbEmbedBtn._listeners.get('click') || []).length, 1);
+
+    teardownModal(win);
+    assert.strictEqual((ytBtn._listeners.get('click') || []).length, 0, 'ytModeBtn listener must be detached on teardown');
+    assert.strictEqual((fbEmbedBtn._listeners.get('click') || []).length, 0, 'fallbackEmbedBtn listener must be detached on teardown');
   });
 
   // ==========================================================================
