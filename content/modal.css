@@ -46,7 +46,7 @@
   --peek-tooltip-border: rgba(255, 255, 255, 0.20);
   --peek-tooltip-text: #ffffff;
   --peek-iframe-bg: #080808;
-  --peek-banner-bg: rgba(12, 12, 12, 0.92);
+  --peek-banner-bg: rgba(12, 12, 12, 0.96);
   --peek-banner-border: rgba(255, 255, 255, 0.16);
   --peek-handle-color: rgba(255, 255, 255, 0.32);
   --peek-handle-hover: rgba(255, 255, 255, 0.78);
@@ -81,7 +81,7 @@
   --peek-tooltip-border: rgba(0, 0, 0, 0.15);
   --peek-tooltip-text: #000000;
   --peek-iframe-bg: #ffffff;
-  --peek-banner-bg: rgba(255, 255, 255, 0.94);
+  --peek-banner-bg: rgba(255, 255, 255, 0.96);
   --peek-banner-border: rgba(0, 0, 0, 0.12);
   --peek-handle-color: rgba(0, 0, 0, 0.28);
   --peek-handle-hover: rgba(0, 0, 0, 0.70);
@@ -118,7 +118,7 @@
     --peek-tooltip-border: rgba(0, 0, 0, 0.15);
     --peek-tooltip-text: #000000;
     --peek-iframe-bg: #ffffff;
-    --peek-banner-bg: rgba(255, 255, 255, 0.94);
+    --peek-banner-bg: rgba(255, 255, 255, 0.96);
     --peek-banner-border: rgba(0, 0, 0, 0.12);
     --peek-handle-color: rgba(0, 0, 0, 0.28);
     --peek-handle-hover: rgba(0, 0, 0, 0.70);
@@ -174,8 +174,6 @@
   display: flex !important;
   flex-direction: column !important;
   background: var(--peek-glass-bg, rgba(8, 8, 8, 0.72)) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border: 1px solid var(--peek-border-glass, rgba(255, 255, 255, 0.18)) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
@@ -223,8 +221,6 @@
   flex: 0 0 44px !important;
   height: 44px !important;
   background: var(--peek-header-bg, rgba(10, 10, 10, 0.68)) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid var(--peek-header-border, rgba(255, 255, 255, 0.14)) !important;
   box-shadow: var(--peek-header-highlight, inset 0 1px 0 0 rgba(255, 255, 255, 0.28)) !important;
   display: flex !important;
@@ -480,10 +476,8 @@
   gap: 10px !important;
   padding: 8px 12px !important;
   border-radius: 8px !important;
-  background: var(--peek-banner-bg, rgba(12, 12, 12, 0.92)) !important;
+  background: var(--peek-banner-bg, rgba(12, 12, 12, 0.96)) !important;
   border: 1px solid var(--peek-banner-border, rgba(255, 255, 255, 0.16)) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
 }
 
@@ -619,6 +613,10 @@
 .peek-wave-modal.peek-positioned {
   animation: none !important;
   transform: translate3d(var(--peek-drag-x, 0px), var(--peek-drag-y, 0px), 0) !important;
+}
+
+.peek-wave-modal.peek-settled:not(.peek-fade-out) {
+  animation: none !important;
 }
 
 @keyframes peek-grow-from-link {

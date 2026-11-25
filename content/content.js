@@ -67,7 +67,7 @@ const MODAL_CSS_TEXT = `
   --peek-tooltip-border: rgba(255, 255, 255, 0.20);
   --peek-tooltip-text: #ffffff;
   --peek-iframe-bg: #080808;
-  --peek-banner-bg: rgba(12, 12, 12, 0.92);
+  --peek-banner-bg: rgba(12, 12, 12, 0.96);
   --peek-banner-border: rgba(255, 255, 255, 0.16);
   --peek-handle-color: rgba(255, 255, 255, 0.32);
   --peek-handle-hover: rgba(255, 255, 255, 0.78);
@@ -102,7 +102,7 @@ const MODAL_CSS_TEXT = `
   --peek-tooltip-border: rgba(0, 0, 0, 0.15);
   --peek-tooltip-text: #000000;
   --peek-iframe-bg: #ffffff;
-  --peek-banner-bg: rgba(255, 255, 255, 0.94);
+  --peek-banner-bg: rgba(255, 255, 255, 0.96);
   --peek-banner-border: rgba(0, 0, 0, 0.12);
   --peek-handle-color: rgba(0, 0, 0, 0.28);
   --peek-handle-hover: rgba(0, 0, 0, 0.70);
@@ -139,7 +139,7 @@ const MODAL_CSS_TEXT = `
     --peek-tooltip-border: rgba(0, 0, 0, 0.15);
     --peek-tooltip-text: #000000;
     --peek-iframe-bg: #ffffff;
-    --peek-banner-bg: rgba(255, 255, 255, 0.94);
+    --peek-banner-bg: rgba(255, 255, 255, 0.96);
     --peek-banner-border: rgba(0, 0, 0, 0.12);
     --peek-handle-color: rgba(0, 0, 0, 0.28);
     --peek-handle-hover: rgba(0, 0, 0, 0.70);
@@ -195,8 +195,6 @@ const MODAL_CSS_TEXT = `
   display: flex !important;
   flex-direction: column !important;
   background: var(--peek-glass-bg, rgba(8, 8, 8, 0.72)) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border: 1px solid var(--peek-border-glass, rgba(255, 255, 255, 0.18)) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
@@ -244,8 +242,6 @@ const MODAL_CSS_TEXT = `
   flex: 0 0 44px !important;
   height: 44px !important;
   background: var(--peek-header-bg, rgba(10, 10, 10, 0.68)) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid var(--peek-header-border, rgba(255, 255, 255, 0.14)) !important;
   box-shadow: var(--peek-header-highlight, inset 0 1px 0 0 rgba(255, 255, 255, 0.28)) !important;
   display: flex !important;
@@ -501,10 +497,8 @@ const MODAL_CSS_TEXT = `
   gap: 10px !important;
   padding: 8px 12px !important;
   border-radius: 8px !important;
-  background: var(--peek-banner-bg, rgba(12, 12, 12, 0.92)) !important;
+  background: var(--peek-banner-bg, rgba(12, 12, 12, 0.96)) !important;
   border: 1px solid var(--peek-banner-border, rgba(255, 255, 255, 0.16)) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
 }
 
@@ -640,6 +634,10 @@ const MODAL_CSS_TEXT = `
 .peek-wave-modal.peek-positioned {
   animation: none !important;
   transform: translate3d(var(--peek-drag-x, 0px), var(--peek-drag-y, 0px), 0) !important;
+}
+
+.peek-wave-modal.peek-settled:not(.peek-fade-out) {
+  animation: none !important;
 }
 
 @keyframes peek-grow-from-link {
@@ -1282,9 +1280,10 @@ function isNavigableHttp(urlDetails, currentLoc) {
  * Step 6: Nullify modal reference to break closures and enable garbage collection.
  * @param {Window} [win] 
  */
-function teardownModal(win) {
+function teardownModal(win, options) {
   if (!currentModal) return;
 
+  const opts = (options && typeof options === 'object') ? options : {};
   const modalRef = currentModal;
   const targetWin = win || modalRef.win || (modalRef.hostElement?.ownerDocument?.defaultView) || (typeof window !== 'undefined' ? window : null);
   const {
@@ -1303,6 +1302,8 @@ function teardownModal(win) {
     backdrop,
     backdropHandler,
     modalClickHandler,
+    modalAnimEndHandler,
+    pausedHostVideos,
     headerDragHandler,
     resizeHandle,
     resizeStartHandler,
@@ -1345,8 +1346,13 @@ function teardownModal(win) {
   if (backdrop && backdropHandler) {
     backdrop.removeEventListener('click', backdropHandler);
   }
-  if (modal && modalClickHandler) {
-    modal.removeEventListener('click', modalClickHandler);
+  if (modal) {
+    if (modalClickHandler) {
+      modal.removeEventListener('click', modalClickHandler);
+    }
+    if (modalAnimEndHandler) {
+      modal.removeEventListener('animationend', modalAnimEndHandler);
+    }
   }
   if (header && headerDragHandler) {
     header.removeEventListener('mousedown', headerDragHandler);
@@ -1404,6 +1410,17 @@ function teardownModal(win) {
       }
     } catch {}
     try {
+      const innerDoc = iframe.contentDocument;
+      if (innerDoc && typeof innerDoc.querySelectorAll === 'function') {
+        const innerMedia = innerDoc.querySelectorAll('video, audio');
+        for (let i = 0; i < innerMedia.length; i++) {
+          try {
+            if (typeof innerMedia[i].pause === 'function') innerMedia[i].pause();
+          } catch {}
+        }
+      }
+    } catch {}
+    try {
       iframe.src = 'about:blank';
     } catch {}
 
@@ -1421,11 +1438,17 @@ function teardownModal(win) {
     hostElement.parentNode.removeChild(hostElement);
   }
 
+  const videosToResume = (opts.resumeHostMedia !== false && Array.isArray(pausedHostVideos))
+    ? pausedHostVideos.slice()
+    : [];
+
   // Step 6: Break object references for GC
   for (const key of Object.keys(modalRef)) {
     modalRef[key] = null;
   }
   currentModal = null;
+
+  resumeHostVideos(videosToResume);
 }
 
 /**
@@ -1495,6 +1518,75 @@ function unregisterHostServiceWorkers(win) {
         })
         .catch(() => {});
     } catch {}
+  }
+}
+
+/**
+ * Checks whether a hostname belongs to YouTube (youtube.com, *.youtube.com, or youtu.be).
+ * @param {string} hostname
+ * @returns {boolean}
+ */
+function isYouTubeHost(hostname) {
+  if (typeof hostname !== 'string' || !hostname.trim()) return false;
+  const clean = hostname.trim().toLowerCase().replace(/^www\./, '').replace(/\.+$/, '');
+  return clean === 'youtube.com' || clean.endsWith('.youtube.com') || clean === 'youtu.be' || clean.endsWith('.youtu.be');
+}
+
+/**
+ * Pauses active video elements in the host document when opening a same-process YouTube preview,
+ * preventing concurrent hardware video decoders from exhausting GPU/renderer resources.
+ * Inline hover previews are paused without queueing for resume on modal close.
+ * @param {Document} doc
+ * @returns {HTMLVideoElement[]} Resumable primary host videos paused by this call
+ */
+function pauseCompetingHostVideos(doc) {
+  const pausedVideos = [];
+  if (!doc || typeof doc.querySelectorAll !== 'function') {
+    return pausedVideos;
+  }
+  try {
+    const videos = doc.querySelectorAll('video');
+    if (!videos || typeof videos.length !== 'number') {
+      return pausedVideos;
+    }
+    for (let i = 0; i < videos.length; i++) {
+      const v = videos[i];
+      if (!v) continue;
+      if (!v.paused && !v.ended && typeof v.pause === 'function') {
+        try { v.pause(); } catch {}
+        let isHoverPreview = false;
+        try {
+          isHoverPreview = typeof v.closest === 'function' && Boolean(
+            v.closest('ytd-video-preview') ||
+            v.closest('#inline-preview-player') ||
+            v.closest('ytd-moving-thumbnail-renderer')
+          );
+        } catch {}
+        if (!isHoverPreview) {
+          pausedVideos.push(v);
+        }
+      }
+    }
+  } catch {}
+  return pausedVideos;
+}
+
+/**
+ * Resumes previously paused host videos when closing a modal without opening a new tab.
+ * @param {HTMLVideoElement[]} videos
+ */
+function resumeHostVideos(videos) {
+  if (!Array.isArray(videos) || videos.length === 0) return;
+  for (let i = 0; i < videos.length; i++) {
+    const v = videos[i];
+    if (v && v.isConnected !== false && v.paused && typeof v.play === 'function') {
+      try {
+        const p = v.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
+      } catch {}
+    }
   }
 }
 
@@ -1572,14 +1664,48 @@ function mountModal(arg0, arg1, arg2) {
     unregisterHostServiceWorkers(win);
   }
 
-  // Preemptively tear down any existing modal
+  const priorPausedHostVideos = (currentModal && Array.isArray(currentModal.pausedHostVideos))
+    ? currentModal.pausedHostVideos.slice()
+    : [];
+
+  // Preemptively tear down any existing modal without resuming host video yet
   if (currentModal) {
-    teardownModal(win);
+    teardownModal(win, { resumeHostMedia: false });
   }
 
   const cleanTargetUrl = stripTrackingParameters(targetUrl);
   const urlDetails = parseUrlDetails(cleanTargetUrl, doc.baseURI);
-  if (!urlDetails) return null;
+  if (!urlDetails) {
+    resumeHostVideos(priorPausedHostVideos);
+    return null;
+  }
+
+  let hostHostname = '';
+  try {
+    hostHostname = win.location?.hostname || (doc.baseURI ? new URL(doc.baseURI).hostname : '');
+  } catch {
+    hostHostname = '';
+  }
+
+  let pausedHostVideos = [];
+  if (isYouTubeHost(hostHostname) && isYouTubeHost(urlDetails.hostname)) {
+    const newlyPaused = pauseCompetingHostVideos(doc);
+    const seenVideos = new Set();
+    for (const v of priorPausedHostVideos) {
+      if (v && !seenVideos.has(v)) {
+        seenVideos.add(v);
+        pausedHostVideos.push(v);
+      }
+    }
+    for (const v of newlyPaused) {
+      if (v && !seenVideos.has(v)) {
+        seenVideos.add(v);
+        pausedHostVideos.push(v);
+      }
+    }
+  } else if (priorPausedHostVideos.length > 0) {
+    resumeHostVideos(priorPausedHostVideos);
+  }
 
   const sizePreset = normalizeModalSize(options.sizePreset || activeSettings.sizePreset || activeSettings.modalSize || 'default');
   const currentTheme = normalizeTheme(options.theme || activeSettings.theme || 'dark');
@@ -1835,7 +1961,7 @@ function mountModal(arg0, arg1, arg2) {
     } else if (win.open) {
       win.open(urlDetails.fullUrl, '_blank', 'noopener,noreferrer');
     }
-    teardownModal(win);
+    teardownModal(win, { resumeHostMedia: false });
   };
   tabBtn.addEventListener('click', tabHandler);
 
@@ -1875,7 +2001,6 @@ function mountModal(arg0, arg1, arg2) {
 
   const iframe = doc.createElement('iframe');
   iframe.className = 'peek-wave-iframe';
-  iframe.src = urlDetails.fullUrl;
   // Strictly omit 'allow-top-navigation' to prevent framed sites from hijacking host window
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads allow-storage-access-by-user-activation');
   iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
@@ -1894,6 +2019,7 @@ function mountModal(arg0, arg1, arg2) {
   iframe.setAttribute('loading', 'eager');
   iframe.setAttribute('importance', 'high');
   iframe.setAttribute('referrerpolicy', 'origin-when-cross-origin');
+  iframe.src = urlDetails.fullUrl;
 
   // Load-Failure / Timeout Fallback Banner (programmatic DOM, zero innerHTML)
   const fallbackBanner = doc.createElement('div');
@@ -2142,6 +2268,14 @@ function mountModal(arg0, arg1, arg2) {
   };
   modalWin.addEventListener('click', modalClickHandler);
 
+  // Mark entrance animation settled once complete so compositor animation state clears
+  const modalAnimEndHandler = (e) => {
+    if (!e || e.target === modalWin) {
+      modalWin.classList.add('peek-settled');
+    }
+  };
+  modalWin.addEventListener('animationend', modalAnimEndHandler, { once: true });
+
   // Step 9: Global Escape keydown listener in window capture phase
   const keydownHandler = (e) => {
     if (e.key === 'Escape' || e.code === 'Escape') {
@@ -2203,6 +2337,8 @@ function mountModal(arg0, arg1, arg2) {
     keydownHandler,
     backdropHandler,
     modalClickHandler,
+    modalAnimEndHandler,
+    pausedHostVideos,
     closeHandler,
     tabHandler,
     copyHandler,
@@ -2507,6 +2643,8 @@ if (typeof module !== 'undefined' && module.exports) {
     teardownModal,
     resolveFaviconUrl,
     unregisterHostServiceWorkers,
+    isYouTubeHost,
+    pauseCompetingHostVideos,
     handleCaptureClick,
     initContentScript,
     getModal: () => currentModal,

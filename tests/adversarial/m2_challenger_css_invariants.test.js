@@ -9,9 +9,9 @@
  *    - transform: translateZ(0) !important;
  *    - isolation: isolate !important;
  *    - zero will-change occurrences
- * 3. Invariant verification on .peek-wave-modal:
- *    - backdrop-filter: blur(20px) saturate(180%) !important;
- *    - -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+ * 3. Invariant verification on .peek-wave-modal, .peek-wave-header, and .peek-wave-fallback-banner:
+ *    - strictly omit backdrop-filter and -webkit-backdrop-filter (single-pass blur(4px) on backdrop only)
+ *    - zero nested blur(20px) / blur(12px) / saturate(180%) render surfaces
  *    - transform: translateZ(0); (non-!important so @keyframes animations can animate transform)
  *    - isolation: isolate !important;
  *    - zero will-change occurrences
@@ -94,13 +94,16 @@ run('2.3: .peek-wave-backdrop strictly omits will-change', () => {
   });
 });
 
-// 3. Modal invariants
-run('3.1: .peek-wave-modal has blur(20px) saturate(180%) in modal.css & MODAL_CSS_TEXT', () => {
+// 3. Modal, Header & Banner invariants (no nested backdrop-filter render surfaces)
+run('3.1: .peek-wave-modal, .peek-wave-header, and .peek-wave-fallback-banner omit backdrop-filter in modal.css & MODAL_CSS_TEXT', () => {
   [modalCss, MODAL_CSS_TEXT].forEach((css, idx) => {
     const label = idx === 0 ? 'modal.css' : 'MODAL_CSS_TEXT';
-    const rule = extractRule(css, '\\.peek-wave-modal');
-    assert(rule.includes('backdrop-filter: blur(20px) saturate(180%) !important;'), `backdrop-filter: blur(20px) saturate(180%) missing in ${label}`);
-    assert(rule.includes('-webkit-backdrop-filter: blur(20px) saturate(180%) !important;'), `-webkit-backdrop-filter: blur(20px) saturate(180%) missing in ${label}`);
+    ['\\.peek-wave-modal', '\\.peek-wave-header', '\\.peek-wave-fallback-banner'].forEach((selector) => {
+      const rule = extractRule(css, selector);
+      assert(!rule.includes('backdrop-filter'), `Nested backdrop-filter must be omitted on ${selector} in ${label}`);
+    });
+    assert(!css.includes('blur(20px)'), `Forbidden blur(20px) found in ${label}`);
+    assert(!css.includes('blur(12px)'), `Forbidden blur(12px) found in ${label}`);
   });
 });
 

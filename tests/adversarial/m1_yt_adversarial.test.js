@@ -121,24 +121,43 @@ async function runM1YtAdversarialTests() {
     }
   });
 
-  test('1.4: Action type is strictly "modifyHeaders"', () => {
+  test('1.4: Action type is strictly "modifyHeaders" with valid responseHeaders or requestHeaders arrays', () => {
     const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
     assert.ok(modifyRules.length >= 1, 'At least one modifyHeaders rule must exist');
+    const hasResponseHeaderRule = modifyRules.some(r => Array.isArray(r.action.responseHeaders));
+    assert.ok(hasResponseHeaderRule, 'At least one modifyHeaders rule must define action.responseHeaders');
     for (const rule of modifyRules) {
       assert.strictEqual(rule.action.type, 'modifyHeaders');
-      assert.ok(Array.isArray(rule.action.responseHeaders), 'action.responseHeaders must be an array');
+      assert.ok(
+        Array.isArray(rule.action.responseHeaders) || Array.isArray(rule.action.requestHeaders),
+        'modifyHeaders rule must define action.responseHeaders or action.requestHeaders'
+      );
     }
   });
 
-  test('1.5: Header removal operations adhere to Chrome DNR specification', () => {
+  test('1.5: Header operations adhere to Chrome DNR specification and scope Sec-Fetch-* away from YouTube', () => {
     const validOperations = new Set(['remove', 'set', 'append']);
     const modifyRules = rules.filter(r => r.action.type === 'modifyHeaders');
     for (const rule of modifyRules) {
-      for (const h of rule.action.responseHeaders) {
-        assert.strictEqual(typeof h.header, 'string', 'Header name must be string');
-        assert.ok(h.header.trim().length > 0, 'Header name must not be empty');
-        assert.ok(validOperations.has(h.operation), `Invalid operation: ${h.operation}`);
-        assert.strictEqual(h.operation, 'remove', 'M1 rules must perform "remove" operation');
+      if (Array.isArray(rule.action.responseHeaders)) {
+        for (const h of rule.action.responseHeaders) {
+          assert.strictEqual(typeof h.header, 'string', 'Header name must be string');
+          assert.ok(h.header.trim().length > 0, 'Header name must not be empty');
+          assert.ok(validOperations.has(h.operation), `Invalid operation: ${h.operation}`);
+          assert.strictEqual(h.operation, 'remove', 'Response header rules must perform "remove" operation');
+        }
+      }
+      if (Array.isArray(rule.action.requestHeaders)) {
+        for (const h of rule.action.requestHeaders) {
+          assert.strictEqual(typeof h.header, 'string', 'Header name must be string');
+          assert.ok(h.header.trim().length > 0, 'Header name must not be empty');
+          assert.ok(validOperations.has(h.operation), `Invalid operation: ${h.operation}`);
+          assert.strictEqual(h.operation, 'set', 'Request header rules must perform "set" operation');
+        }
+        const excluded = rule.condition?.excludedRequestDomains || [];
+        for (const ytDomain of ['youtube.com', 'youtu.be', 'googlevideo.com', 'accounts.google.com']) {
+          assert.ok(excluded.includes(ytDomain), `Request header spoofing must exclude ${ytDomain}`);
+        }
       }
     }
   });
@@ -154,7 +173,10 @@ async function runM1YtAdversarialTests() {
       'content-security-policy',
       'content-security-policy-report-only',
       'cross-origin-opener-policy',
-      'cross-origin-embedder-policy'
+      'cross-origin-opener-policy-report-only',
+      'cross-origin-embedder-policy',
+      'cross-origin-embedder-policy-report-only',
+      'document-isolation-policy'
     ];
 
     for (const req of requiredHeaders) {
@@ -223,7 +245,7 @@ async function runM1YtAdversarialTests() {
 
       // Check urlFilter wildcard
       if (rule.condition.urlFilter === '*' || url.includes(rule.condition.urlFilter)) {
-        if (rule.action.type === 'modifyHeaders') {
+        if (rule.action.type === 'modifyHeaders' && Array.isArray(rule.action.responseHeaders)) {
           for (const mod of rule.action.responseHeaders) {
             if (mod.operation === 'remove') {
               headers.delete(mod.header.toLowerCase());
@@ -467,15 +489,20 @@ async function runM1YtAdversarialTests() {
     );
   });
 
-  test('5.5: Backdrop blur reduced to 4px to prevent Skia rasterizer Gaussian blur bottleneck', () => {
-    assert.ok(
-      MODAL_CSS_TEXT.includes('backdrop-filter: blur(4px) !important;'),
-      'Backdrop filter blur must be 4px'
-    );
-    assert.ok(
-      !MODAL_CSS_TEXT.includes('backdrop-filter: blur(8px)'),
-      'Old 8px backdrop blur must be replaced'
-    );
+  test('5.5: Backdrop blur tuned to single-pass 4px without nested blur render surfaces', () => {
+    const modalCss = fs.readFileSync(MODAL_CSS_PATH, 'utf8');
+    for (const [label, css] of [['MODAL_CSS_TEXT', MODAL_CSS_TEXT], ['modal.css', modalCss]]) {
+      assert.ok(
+        css.includes('backdrop-filter: blur(4px) !important;'),
+        `Backdrop filter blur(4px) missing in ${label}`
+      );
+      for (const forbidden of ['blur(8px)', 'blur(12px)', 'blur(20px)', 'saturate(180%)']) {
+        assert.ok(
+          !css.includes(forbidden),
+          `Nested/heavy blur token "${forbidden}" must not appear in ${label}`
+        );
+      }
+    }
   });
 
   test('5.6: Size presets (compact, default, large) comply with specification', () => {
@@ -644,6 +671,127 @@ async function runM1YtAdversarialTests() {
     // Teardown should still safely clean up iframe, listeners, and references without error
     teardownModal(win);
     assert.strictEqual(getModal(), null);
+  });
+
+  function createMockHostVideo(doc) {
+    const video = doc.createElement('video');
+    video.paused = false;
+    video.ended = false;
+    video.isConnected = true;
+    video.pauseCalls = 0;
+    video.playCalls = 0;
+    video.pause = () => {
+      video.paused = true;
+      video.pauseCalls++;
+    };
+    video.play = () => {
+      video.paused = false;
+      video.playCalls++;
+      return Promise.resolve();
+    };
+    return video;
+  }
+
+  test('6.10: YouTube-on-YouTube pauses main & hover videos, resumes only main on close, skips resume on Open in New Tab', () => {
+    // 1. Escape / backdrop / close vectors resume main video only
+    for (const trigger of ['escape', 'backdrop', 'close']) {
+      const { win, doc } = setupEnv();
+      win.location = new URL('https://www.youtube.com/watch?v=hostVideo');
+      const mainVideo = createMockHostVideo(doc);
+      const previewContainer = doc.createElement('ytd-video-preview');
+      const hoverVideo = createMockHostVideo(doc);
+      previewContainer.appendChild(hoverVideo);
+      doc.body.appendChild(mainVideo);
+      doc.body.appendChild(previewContainer);
+
+      const modal = mountModal('https://www.youtube.com/watch?v=childVideo', { win });
+      assert.ok(modal, `Modal must mount for ${trigger}`);
+      assert.strictEqual(mainVideo.paused, true, `Main video must be paused during preview (${trigger})`);
+      assert.strictEqual(mainVideo.pauseCalls, 1);
+      assert.strictEqual(hoverVideo.paused, true, `Inline hover video must be paused (${trigger})`);
+      assert.strictEqual(hoverVideo.pauseCalls, 1);
+
+      if (trigger === 'escape') {
+        win.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+      } else if (trigger === 'backdrop') {
+        modal.backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      } else {
+        modal.closeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      }
+
+      assert.strictEqual(mainVideo.paused, false, `Main video must resume on ${trigger}`);
+      assert.strictEqual(mainVideo.playCalls, 1, `Main video play() called once on ${trigger}`);
+      assert.strictEqual(hoverVideo.paused, true, `Hover video must remain paused on ${trigger}`);
+      assert.strictEqual(hoverVideo.playCalls, 0, `Hover video must never resume on ${trigger}`);
+    }
+
+    // 2. Open in New Tab leaves host video paused
+    const { win, doc } = setupEnv();
+    win.location = new URL('https://www.youtube.com/watch?v=hostVideo');
+    const mainVideo = createMockHostVideo(doc);
+    doc.body.appendChild(mainVideo);
+
+    const modal = mountModal('https://www.youtube.com/watch?v=childVideo', { win });
+    assert.strictEqual(mainVideo.paused, true);
+    modal.tabBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    assert.strictEqual(getModal(), null);
+    assert.strictEqual(mainVideo.paused, true, 'Main video must remain paused after Open in New Tab');
+    assert.strictEqual(mainVideo.playCalls, 0);
+  });
+
+  test('6.11: Peeking a non-YouTube URL while on youtube.com does NOT pause parent YouTube video', () => {
+    const { win, doc } = setupEnv();
+    win.location = new URL('https://www.youtube.com/watch?v=hostVideo');
+    const mainVideo = createMockHostVideo(doc);
+    doc.body.appendChild(mainVideo);
+
+    const modal = mountModal('https://en.wikipedia.org/wiki/Chromium', { win });
+    assert.ok(modal);
+    assert.strictEqual(mainVideo.paused, false, 'Parent YouTube video must keep playing for non-YouTube peek');
+    assert.strictEqual(mainVideo.pauseCalls, 0);
+
+    teardownModal(win);
+    assert.strictEqual(mainVideo.playCalls, 0);
+  });
+
+  test('6.12: Preemptive remount between YouTube previews keeps host video paused without flicker until final teardown', () => {
+    const { win, doc } = setupEnv();
+    win.location = new URL('https://www.youtube.com/watch?v=hostVideo');
+    const mainVideo = createMockHostVideo(doc);
+    doc.body.appendChild(mainVideo);
+
+    mountModal('https://www.youtube.com/watch?v=child1', { win });
+    assert.strictEqual(mainVideo.paused, true);
+    assert.strictEqual(mainVideo.playCalls, 0);
+
+    // Preemptively mount second YouTube preview
+    mountModal('https://youtu.be/child2', { win });
+    assert.strictEqual(mainVideo.paused, true, 'Host video must stay paused across preemptive remount');
+    assert.strictEqual(mainVideo.playCalls, 0, 'Host video must not flicker-play during preemptive remount');
+
+    teardownModal(win);
+    assert.strictEqual(mainVideo.paused, false, 'Host video must resume after final teardown');
+    assert.strictEqual(mainVideo.playCalls, 1);
+  });
+
+  test('6.13: animationend marks modal .peek-settled and teardown removes animationend listener cleanly', () => {
+    const { win } = setupEnv();
+    const { Event } = require('../harness/dom_simulator');
+
+    // Case A: animationend fires before teardown
+    const modalA = mountModal('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { win });
+    assert.strictEqual(modalA.modal.classList.contains('peek-settled'), false);
+    modalA.modal.dispatchEvent(new Event('animationend', { bubbles: false }));
+    assert.strictEqual(modalA.modal.classList.contains('peek-settled'), true);
+    assert.strictEqual((modalA.modal._listeners.get('animationend') || []).length, 0);
+    teardownModal(win);
+
+    // Case B: teardown runs before animationend fires
+    const modalB = mountModal('https://www.youtube.com/watch?v=dQw4w9WgXcQ', { win });
+    const modalEl = modalB.modal;
+    assert.strictEqual((modalEl._listeners.get('animationend') || []).length, 1);
+    teardownModal(win);
+    assert.strictEqual((modalEl._listeners.get('animationend') || []).length, 0, 'animationend listener must be detached on teardown');
   });
 
   // ==========================================================================

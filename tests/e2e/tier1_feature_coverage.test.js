@@ -106,19 +106,24 @@ describe('Tier 1: Feature Coverage', () => {
       assert.ok(!rule.condition.resourceTypes.includes('main_frame'), 'Must NEVER strip headers on main_frame');
     });
 
-    test('T1.F2.7: DNR rule sets Sec-Fetch-Dest request header to document on sub_frame requests', () => {
-      const rule = rules.find(r => r.id === 1) || rules[0];
-      assert.ok(Array.isArray(rule.action.requestHeaders), 'requestHeaders must be an array');
-      const hasDest = rule.action.requestHeaders.some(h =>
+    test('T1.F2.7: DNR request-header rule sets Sec-Fetch-Dest request header to document on sub_frame requests while excluding YouTube', () => {
+      const reqRule = rules.find(r => Array.isArray(r.action?.requestHeaders));
+      assert.ok(reqRule, 'A modifyHeaders rule with requestHeaders must exist');
+      assert.ok(reqRule.condition.resourceTypes.includes('sub_frame'), 'Must target sub_frame');
+      assert.ok(!reqRule.condition.resourceTypes.includes('main_frame'), 'Must NEVER target main_frame');
+      const hasDest = reqRule.action.requestHeaders.some(h =>
         h.header.toLowerCase() === 'sec-fetch-dest' && h.operation === 'set' && h.value === 'document'
       );
       assert.ok(hasDest, 'Must set Sec-Fetch-Dest to document to prevent server connection refusal');
+      const excluded = reqRule.condition.excludedRequestDomains || [];
+      assert.ok(excluded.includes('youtube.com'), 'Must exclude youtube.com from Sec-Fetch-* spoofing');
+      assert.ok(excluded.includes('youtu.be'), 'Must exclude youtu.be from Sec-Fetch-* spoofing');
     });
 
-    test('T1.F2.8: DNR rule sets Sec-Fetch-Mode request header to navigate on sub_frame requests', () => {
-      const rule = rules.find(r => r.id === 1) || rules[0];
-      assert.ok(Array.isArray(rule.action.requestHeaders), 'requestHeaders must be an array');
-      const hasMode = rule.action.requestHeaders.some(h =>
+    test('T1.F2.8: DNR request-header rule sets Sec-Fetch-Mode request header to navigate on sub_frame requests', () => {
+      const reqRule = rules.find(r => Array.isArray(r.action?.requestHeaders));
+      assert.ok(reqRule, 'A modifyHeaders rule with requestHeaders must exist');
+      const hasMode = reqRule.action.requestHeaders.some(h =>
         h.header.toLowerCase() === 'sec-fetch-mode' && h.operation === 'set' && h.value === 'navigate'
       );
       assert.ok(hasMode, 'Must set Sec-Fetch-Mode to navigate');

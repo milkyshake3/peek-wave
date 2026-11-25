@@ -306,17 +306,16 @@ const SPEC_RULES = [
     priority: 1,
     action: {
       type: "modifyHeaders",
-      requestHeaders: [
-        { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
-        { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" }
-      ],
       responseHeaders: [
         { header: "X-Frame-Options", operation: "remove" },
         { header: "Frame-Options", operation: "remove" },
         { header: "Content-Security-Policy", operation: "remove" },
         { header: "Content-Security-Policy-Report-Only", operation: "remove" },
         { header: "Cross-Origin-Opener-Policy", operation: "remove" },
-        { header: "Cross-Origin-Embedder-Policy", operation: "remove" }
+        { header: "Cross-Origin-Opener-Policy-Report-Only", operation: "remove" },
+        { header: "Cross-Origin-Embedder-Policy", operation: "remove" },
+        { header: "Cross-Origin-Embedder-Policy-Report-Only", operation: "remove" },
+        { header: "Document-Isolation-Policy", operation: "remove" }
       ]
     },
     condition: {
@@ -333,6 +332,29 @@ const SPEC_RULES = [
     condition: {
       urlFilter: "||abs.twimg.com/responsive-web/client-serviceworker/*",
       resourceTypes: ["script", "xmlhttprequest"]
+    }
+  },
+  {
+    id: 3,
+    priority: 2,
+    action: {
+      type: "modifyHeaders",
+      requestHeaders: [
+        { header: "Sec-Fetch-Dest", operation: "set", value: "document" },
+        { header: "Sec-Fetch-Mode", operation: "set", value: "navigate" }
+      ]
+    },
+    condition: {
+      urlFilter: "*",
+      excludedRequestDomains: [
+        "youtube.com",
+        "youtu.be",
+        "googlevideo.com",
+        "accounts.google.com",
+        "doubleclick.net",
+        "googlesyndication.com"
+      ],
+      resourceTypes: ["sub_frame"]
     }
   }
 ];
