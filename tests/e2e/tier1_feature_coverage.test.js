@@ -155,9 +155,9 @@ describe('Tier 1: Feature Coverage', () => {
       assert.ok(!embedRefRule.condition.resourceTypes.includes('main_frame'), 'Must NEVER target main_frame');
 
       const hasReferer = embedRefRule.action.requestHeaders.some(h =>
-        h.header.toLowerCase() === 'referer' && h.operation === 'set' && h.value === 'https://peekwave.app/'
+        h.header.toLowerCase() === 'referer' && h.operation === 'set' && h.value === 'https://noelbuilds.dev/'
       );
-      assert.ok(hasReferer, 'Must set Referer to https://peekwave.app/');
+      assert.ok(hasReferer, 'Must set Referer to https://noelbuilds.dev/');
 
       const reqDomains = embedRefRule.condition.requestDomains || [];
       assert.ok(reqDomains.includes('youtube-nocookie.com'), 'Must match youtube-nocookie.com');

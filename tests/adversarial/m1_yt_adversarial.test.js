@@ -237,7 +237,7 @@ async function runM1YtAdversarialTests() {
     const refererMod = rule.action.requestHeaders.find(h => h.header.toLowerCase() === 'referer');
     assert.ok(refererMod, 'Rule 4 must modify Referer request header');
     assert.strictEqual(refererMod.operation, 'set');
-    assert.strictEqual(refererMod.value, 'https://peekwave.app/');
+    assert.strictEqual(refererMod.value, 'https://noelbuilds.dev/');
 
     assert.strictEqual(rule.condition.urlFilter, '/embed/');
     assert.ok(Array.isArray(rule.condition.requestDomains));

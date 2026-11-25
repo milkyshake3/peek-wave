@@ -364,7 +364,7 @@ const SPEC_RULES = [
     action: {
       type: "modifyHeaders",
       requestHeaders: [
-        { header: "Referer", operation: "set", value: "https://peekwave.app/" }
+        { header: "Referer", operation: "set", value: "https://noelbuilds.dev/" }
       ]
     },
     condition: {

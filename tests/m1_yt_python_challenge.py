@@ -187,7 +187,7 @@ def test_rules_json_embed_referer():
     referer_hdr = next((h for h in req_headers if h.get('header', '').lower() == 'referer'), None)
     assert referer_hdr is not None, "Rule 4 must modify Referer header"
     assert referer_hdr.get('operation') == 'set', "Rule 4 must set Referer"
-    assert referer_hdr.get('value') == 'https://peekwave.app/', "Rule 4 must set Referer to https://peekwave.app/"
+    assert referer_hdr.get('value') == 'https://noelbuilds.dev/', "Rule 4 must set Referer to https://noelbuilds.dev/"
 
     cond = rule4.get('condition', {})
     assert cond.get('urlFilter') == '/embed/', "Rule 4 urlFilter must be /embed/"
